@@ -152,33 +152,29 @@ export class LoginComponent {
     const { email, password, organizacion } = this.loginForm.value as ILoginCredentials;
 
     if (!this.networkService.isOnline) {
-      // Validar usuario offline
       const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
       if (lastUserEmail && lastUserEmail === email) {
-        // Permitir acceso offline
-        this.snackBar.open('Acceso offline permitido. Trabajando sin conexión.', 'Cerrar', {
-          duration: 4000,
-          panelClass: ['snackbar-warn']
+        // Permite acceso offline solo si el email coincide
+        this.snackBar.open('Acceso offline permitido para el último usuario logueado.', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-success']
         });
-        // Opcional: cargar datos offline, navegar al dashboard, etc.
-        this.router.navigate(['/rufe/new']);
-        return;
+        // Opcional: puedes guardar un flag de sesión offline si lo necesitas
+        this.router.navigate(['/dashboard']);
       } else {
-        this.snackBar.open('Solo el último usuario logueado puede ingresar sin conexión.', 'Cerrar', {
-          duration: 5000,
+        this.snackBar.open('Sin conexión. Solo el último usuario logueado puede acceder.', 'Cerrar', {
+          duration: 4000,
           panelClass: ['snackbar-error']
         });
-        return;
       }
+      return;
     }
 
     this.loading = true;
 
     this.authService.login({ email, password, organizacion }).subscribe({
       next: (user) => {
-        // Guardar el email del último usuario logueado
         localStorage.setItem('lastLoggedUserEmail', email);
-
         this.snackBar.open(`¡Bienvenido, ${user.nombre}!`, 'Cerrar', { duration: 3000 });
         this.router.navigate(['/dashboard']);
       },

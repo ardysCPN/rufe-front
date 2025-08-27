@@ -6,6 +6,7 @@ import { AuthService } from '../services/auth.service';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar'; // For notifications
 import { of } from 'rxjs';
+import { NetworkService } from '../services/network.service'; // Importa el servicio de red
 
 /**
  * AuthGuard to protect routes.
@@ -15,11 +16,26 @@ export const AuthGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const snackBar = inject(MatSnackBar);
+  const networkService = inject(NetworkService);
 
   // Take the current user value and then map it to a boolean
   return authService.currentUser.pipe(
     take(1), // Take only the first emission and then complete
-    switchMap(user => { // Use switchMap to switch to an observable returned by validateTokenAndKeepAlive
+    switchMap(user => {
+      if (!networkService.isOnline) {
+        const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
+        if (lastUserEmail) {
+          return of(true);
+        } else {
+          snackBar.open('Solo el último usuario logueado puede trabajar sin conexión.', 'Cerrar', {
+            duration: 4000,
+            panelClass: ['snackbar-error']
+          });
+          router.navigate(['/login']);
+          return of(false);
+        }
+      }
+
       if (user && user.token) {
         // User is logged in, now validate the token with the backend (or local check)
         return authService.validateTokenAndKeepAlive().pipe(
