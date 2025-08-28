@@ -1,104 +1,85 @@
-// src/app/shared/components/select/select.component.ts
-
-import { Component, Input, Self, Optional } from '@angular/core';
+import { Component, Input, forwardRef, ChangeDetectorRef } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ControlValueAccessor, NgControl, ReactiveFormsModule, FormControl, Validators } from '@angular/forms';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ICatalogoItemResponse } from '../../../models/catalogs.model';
 
 @Component({
   selector: 'app-select',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatProgressSpinnerModule
-  ],
-  template: `
-    <div>
-      <label [htmlFor]="id" class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200">
-        {{ label }} <span *ngIf="required" class="text-red-500">*</span>
-      </label>
-      <div class="mt-2">
-        <div class="relative">
-          <select
-            [id]="id"
-            [name]="name"
-            [formControl]="control"
-            [required]="required"
-            [disabled]="loadingOptions"
-            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:focus:ring-indigo-500"
-            [ngClass]="{'ring-red-500 focus:ring-red-500': control.invalid && (control.dirty || control.touched), 'opacity-50 cursor-not-allowed': loadingOptions}"
-          >
-            <option value="" disabled selected *ngIf="showDefaultOption || loadingOptions">
-              {{ loadingOptions ? 'Cargando...' : defaultOptionText }}
-            </option>
-            <option *ngFor="let option of options" [value]="option.id">
-              {{ option.nombre }}
-            </option>
-          </select>
-          <div *ngIf="loadingOptions" class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <mat-spinner [diameter]="20" class="text-indigo-600 dark:text-indigo-400"></mat-spinner>
-          </div>
-        </div>
-
-        <ng-container *ngIf="control?.invalid && (control?.dirty || control?.touched)">
-          <p *ngIf="control?.errors?.['required']" class="mt-2 text-sm text-red-600">
-            {{ label }} es requerido.
-          </p>
-          <ng-content select="[customError]"></ng-content>
-        </ng-container>
-      </div>
-    </div>
-  `,
-  styles: [`
-    /* No additional styles needed, Tailwind handles it */
-  `]
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './select.component.html',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => SelectComponent),
+      multi: true
+    }
+  ]
 })
 export class SelectComponent implements ControlValueAccessor {
   @Input() label: string = '';
   @Input() id: string = '';
   @Input() name: string = '';
-  @Input() required: boolean = false;
   @Input() options: ICatalogoItemResponse[] = [];
-  @Input() showDefaultOption: boolean = true;
-  @Input() defaultOptionText: string = 'Selecciona una opción';
-  @Input() loadingOptions: boolean = false; // NEW: loading state for options
+  @Input() required: boolean = false;
+  @Input() loadingOptions: boolean = false;
 
-  control!: FormControl<any>;
+  value: any = ''; // Inicializar a string vacío para que el placeholder se muestre por defecto.
+  disabled: boolean = false;
 
-  constructor(@Optional() @Self() public ngControl: NgControl) {
-    if (this.ngControl) {
-      this.ngControl.valueAccessor = this;
-    }
+  // Funciones para propagar cambios al Forms API
+  onChange: (value: any) => void = () => { };
+  onTouched: () => void = () => {};
+
+  constructor(private _cdr: ChangeDetectorRef) {}
+
+  /**
+   * Escribe un nuevo valor desde el modelo a la vista. Mapea `null` a `''` para el placeholder.
+   */
+  writeValue(value: any): void {
+    // Cuando el modelo del formulario es null o undefined (ej. en un reset),
+    // se establece el valor interno a un string vacío para que coincida con el placeholder.
+    this.value = (value === null || value === undefined) ? '' : value;
+    this._cdr.markForCheck();
   }
 
-  ngOnInit(): void {
-    if (this.ngControl && this.ngControl.control) {
-      this.control = this.ngControl.control as FormControl;
-      if (this.required) {
-        this.control.addValidators(Validators.required);
-      }
-    } else {
-      // Fallback for standalone usage
-      this.control = new FormControl('');
-      if (this.required) {
-        this.control.addValidators(Validators.required);
-      }
-    }
-  }
-
-  // ControlValueAccessor methods
-  writeValue(obj: any): void {
-    this.control?.setValue(obj, { emitEvent: false });
-  }
+  /**
+   * Registra una función de callback para ser llamada cuando el valor cambie en la UI.
+   */
   registerOnChange(fn: any): void {
-    this.control?.valueChanges.subscribe(fn);
+    this.onChange = fn;
   }
+
+  /**
+   * Registra una función de callback para ser llamada cuando el control sea "tocado".
+   */
   registerOnTouched(fn: any): void {
-    this.control?.statusChanges.subscribe(() => fn());
+    this.onTouched = fn;
   }
+
+  /**
+   * Se llama cuando el estado de deshabilitado del control cambia.
+   */
   setDisabledState?(isDisabled: boolean): void {
-    isDisabled ? this.control?.disable() : this.control?.enable();
+    this.disabled = isDisabled;
+    this._cdr.markForCheck();
+  }
+
+  /**
+   * Se llama cuando el usuario selecciona una opción. Propaga el cambio al modelo.
+   */
+  onSelectionChange(event: Event) {
+    const selectElement = event.target as HTMLSelectElement;
+    const stringValue = selectElement.value;
+
+    // El placeholder tiene un valor de string vacío. Lo mapeamos a `null` para el modelo.
+    if (stringValue === '') {
+      this.onChange(null);
+    } else {
+      // Los valores de las opciones son los IDs numéricos. Los convertimos de nuevo a número para mantener la consistencia de tipos.
+      const numericValue = parseInt(stringValue, 10);
+      this.onChange(numericValue);
+    }
+    this.onTouched();
   }
 }

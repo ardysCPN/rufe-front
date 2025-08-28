@@ -4,7 +4,7 @@ import { Injectable, PLATFORM_ID, Inject, forwardRef, NgZone } from '@angular/co
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, throwError, of, timer, Subject, forkJoin } from 'rxjs'; // Added forkJoin
+import { BehaviorSubject, Observable, throwError, of, timer, Subject, forkJoin, from } from 'rxjs'; // Added forkJoin
 import { catchError, tap, takeUntil, switchMap, finalize } from 'rxjs/operators';
 import { ILoginCredentials, IUser, ICatalogApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
@@ -210,12 +210,7 @@ export class AuthService {
     console.log('Logging out user...');
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
-      // Clear all IndexedDB tables on logout for complete data removal
-      this.dbService.clearAllTables().then(() => {
-        console.log('IndexedDB tables cleared on logout.');
-      }).catch(err => {
-        console.error('Error clearing IndexedDB tables on logout:', err);
-      });
+      // No se borran las tablas de IndexedDB para mantener los catálogos para uso offline.
       this.clearInactivityTimer();
       this.destroy$.next();
       this.destroy$.complete();
@@ -272,6 +267,7 @@ export class AuthService {
   /**
    * Fetches all catalog data from the backend and stores it in IndexedDB.
    * This method is designed to be called when the app is online.
+   * Primero comprueba si los catálogos ya existen para evitar descargas innecesarias.
    * @returns An Observable that completes when all catalogs are fetched and stored.
    */
   fetchAndStoreCatalogs(): Observable<boolean> {
@@ -280,51 +276,63 @@ export class AuthService {
       return of(false);
     }
 
-    const user = this.currentUserValue;
-    if (!user || user.rolId === undefined) {
-      console.warn('Cannot fetch catalogs: User not authenticated or role information missing.');
-      return throwError(() => new Error('Usuario no autenticado o información de rol no disponible para catálogos.'));
-    }
+    // Se asume que DatabaseService tiene un método para contar registros, como `countDepartamentos()`,
+    // que devuelve una Promise<number>. Esto es para verificar si los catálogos ya existen.
+    return from(this.dbService.countDepartamentos()).pipe(
+      switchMap(count => {
+        if (count > 0) {
+          console.log('Los catálogos ya existen en IndexedDB. Omitiendo la descarga.');
+          return of(true);
+        }
 
-    // Define all catalog requests
-    const catalogRequests = {
-      departamentos: this.http.get<ICatalogoDepartamento[]>(`${environment.apiUrl}/api/catalogos/departamentos`),
-      municipios: this.http.get<ICatalogoMunicipio[]>(`${environment.apiUrl}/api/catalogos/municipios`),
-      eventos: this.http.get<ICatalogoEvento[]>(`${environment.apiUrl}/api/catalogos/eventos`),
-      tipoUbicacionBien: this.http.get<ICatalogoTipoUbicacionBien[]>(`${environment.apiUrl}/api/catalogos/tipo-ubicacion-bien`),
-      tipoAlojamientoActual: this.http.get<ICatalogoTipoAlojamientoActual[]>(`${environment.apiUrl}/api/catalogos/tipo-alojamiento-actual`),
-      formaTenenciaBien: this.http.get<ICatalogoFormaTenenciaBien[]>(`${environment.apiUrl}/api/catalogos/forma-tenencia-bien`),
-      estadoBien: this.http.get<ICatalogoEstadoBien[]>(`${environment.apiUrl}/api/catalogos/estado-bien`),
-      tipoBien: this.http.get<ICatalogoTipoBien[]>(`${environment.apiUrl}/api/catalogos/tipo-bien`),
-      tipoDocumento: this.http.get<ICatalogoTipoDocumento[]>(`${environment.apiUrl}/api/catalogos/tipo-documento`),
-      parentesco: this.http.get<ICatalogoParentesco[]>(`${environment.apiUrl}/api/catalogos/parentesco`),
-      genero: this.http.get<ICatalogoGenero[]>(`${environment.apiUrl}/api/catalogos/genero`),
-      pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`)
-    };
+        console.log('Catálogos no encontrados en IndexedDB. Descargando del servidor...');
+        const user = this.currentUserValue;
+        if (!user || user.rolId === undefined) {
+          console.warn('Cannot fetch catalogs: User not authenticated or role information missing.');
+          return throwError(() => new Error('Usuario no autenticado o información de rol no disponible para catálogos.'));
+        }
 
-    // Use forkJoin to wait for all catalog requests to complete
-    return forkJoin(catalogRequests).pipe(
-      tap(results => {
-        this.dbService.bulkPutDepartamentos(results.departamentos);
-        this.dbService.bulkPutMunicipios(results.municipios);
-        this.dbService.bulkPutEventos(results.eventos);
-        this.dbService.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
-        this.dbService.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
-        this.dbService.bulkPutFormaTenenciaBien(results.formaTenenciaBien);
-        this.dbService.bulkPutEstadoBien(results.estadoBien);
-        this.dbService.bulkPutTipoBien(results.tipoBien);
-        this.dbService.bulkPutTipoDocumento(results.tipoDocumento);
-        this.dbService.bulkPutParentesco(results.parentesco);
-        this.dbService.bulkPutGenero(results.genero);
-        this.dbService.bulkPutPertenenciaEtnica(results.pertenenciaEtnica);
+        // Define all catalog requests
+        const catalogRequests = {
+          departamentos: this.http.get<ICatalogoDepartamento[]>(`${environment.apiUrl}/api/catalogos/departamentos`),
+          municipios: this.http.get<ICatalogoMunicipio[]>(`${environment.apiUrl}/api/catalogos/municipios`),
+          eventos: this.http.get<ICatalogoEvento[]>(`${environment.apiUrl}/api/catalogos/eventos`),
+          tipoUbicacionBien: this.http.get<ICatalogoTipoUbicacionBien[]>(`${environment.apiUrl}/api/catalogos/tipo-ubicacion-bien`),
+          tipoAlojamientoActual: this.http.get<ICatalogoTipoAlojamientoActual[]>(`${environment.apiUrl}/api/catalogos/tipo-alojamiento-actual`),
+          formaTenenciaBien: this.http.get<ICatalogoFormaTenenciaBien[]>(`${environment.apiUrl}/api/catalogos/forma-tenencia-bien`),
+          estadoBien: this.http.get<ICatalogoEstadoBien[]>(`${environment.apiUrl}/api/catalogos/estado-bien`),
+          tipoBien: this.http.get<ICatalogoTipoBien[]>(`${environment.apiUrl}/api/catalogos/tipo-bien`),
+          tipoDocumento: this.http.get<ICatalogoTipoDocumento[]>(`${environment.apiUrl}/api/catalogos/tipo-documento`),
+          parentesco: this.http.get<ICatalogoParentesco[]>(`${environment.apiUrl}/api/catalogos/parentesco`),
+          genero: this.http.get<ICatalogoGenero[]>(`${environment.apiUrl}/api/catalogos/genero`),
+          pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`)
+        };
 
-        console.log('All catalogs stored in IndexedDB.');
-      }),
-      catchError(error => {
-        console.error('Error fetching and storing catalogs:', error);
-        return throwError(() => new Error('Fallo al cargar y almacenar catálogos.'));
-      }),
-      switchMap(() => of(true)) // Emit true on successful completion
+        // Use forkJoin to wait for all catalog requests to complete
+        return forkJoin(catalogRequests).pipe(
+          tap(results => {
+            this.dbService.bulkPutDepartamentos(results.departamentos);
+            this.dbService.bulkPutMunicipios(results.municipios);
+            this.dbService.bulkPutEventos(results.eventos);
+            this.dbService.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
+            this.dbService.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
+            this.dbService.bulkPutFormaTenenciaBien(results.formaTenenciaBien);
+            this.dbService.bulkPutEstadoBien(results.estadoBien);
+            this.dbService.bulkPutTipoBien(results.tipoBien);
+            this.dbService.bulkPutTipoDocumento(results.tipoDocumento);
+            this.dbService.bulkPutParentesco(results.parentesco);
+            this.dbService.bulkPutGenero(results.genero);
+            this.dbService.bulkPutPertenenciaEtnica(results.pertenenciaEtnica);
+
+            console.log('All catalogs stored in IndexedDB.');
+          }),
+          catchError(error => {
+            console.error('Error fetching and storing catalogs:', error);
+            return throwError(() => new Error('Fallo al cargar y almacenar catálogos.'));
+          }),
+          switchMap(() => of(true)) // Emit true on successful completion
+        );
+      })
     );
   }
 

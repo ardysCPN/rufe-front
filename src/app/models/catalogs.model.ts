@@ -11,7 +11,7 @@ export interface ICatalogoItemResponse {
 
 // Existing catalog interfaces (assuming they are already defined like this)
 export interface ICatalogoMunicipio extends ICatalogoItemResponse {
-  departamento_id: number; // Assuming this property exists
+  departamentoId: number; // Assuming this property exists
 }
 
 export interface ICatalogoDepartamento extends ICatalogoItemResponse {}

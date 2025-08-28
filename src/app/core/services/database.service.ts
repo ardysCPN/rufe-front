@@ -230,6 +230,18 @@ export class DatabaseService {
     }
   }
 
+  public async countDepartamentos(): Promise<number> {
+    if (!this.isBrowser) return 0;
+    try {
+      const count = await this.db.catalogos_departamentos.count();
+      console.log(`Hay ${count} departamentos en IndexedDB.`);
+      return count;
+    } catch (error) {
+      console.error('Error al contar los departamentos:', error);
+      return 0;
+    }
+  }
+
   public async bulkPutTiposDocumento(tipos: ICatalogoTipoDocumento[]): Promise<void> {
     if (!this.isBrowser) return;
     try {
@@ -517,6 +529,28 @@ export class DatabaseService {
       console.log('Todas las tablas de IndexedDB han sido limpiadas.');
     } catch (error) {
       console.error('Error al limpiar todas las tablas:', error);
+    }
+  }
+
+  public async clearCatalogTables(): Promise<void> {
+    if (!this.isBrowser) return;
+    try {
+      await this.db.catalogos_municipios.clear();
+      await this.db.catalogos_departamentos.clear();
+      await this.db.catalogos_tipos_documento.clear();
+      await this.db.catalogos_generos.clear();
+      await this.db.catalogos_parentescos.clear();
+      await this.db.catalogos_zonas.clear();
+      await this.db.catalogos_tipo_ubicacion_bien.clear();
+      await this.db.catalogos_tipo_alojamiento_actual.clear();
+      await this.db.catalogos_forma_tenencia_bien.clear();
+      await this.db.catalogos_estado_bien.clear();
+      await this.db.catalogos_tipo_bien.clear();
+      await this.db.catalogos_pertenencia_etnica.clear();
+      await this.db.catalogos_eventos.clear();
+      console.log('Tablas de catálogos de IndexedDB han sido limpiadas.');
+    } catch (error) {
+      console.error('Error al limpiar tablas de catálogos:', error);
     }
   }
 }
