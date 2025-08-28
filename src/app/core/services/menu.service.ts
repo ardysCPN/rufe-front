@@ -8,6 +8,7 @@ import { IMenuItem } from '../models/menu.model';
 import { environment } from '../../../environments/environment';
 import { IUser } from '../models/auth.model'; // Import IUser
 import { NetworkService } from './network.service'; // Importa el servicio de red
+import localForage from 'localforage';
 
 @Injectable({
   providedIn: 'root'
@@ -29,21 +30,33 @@ export class MenuService {
    * @returns An Observable of the menu items.
    */
   getDynamicMenu(currentUser: IUser | null): Observable<IMenuItem[]> {
-    if (!this.networkService.isOnline) {
-      // Si está offline, muestra solo el menú mínimo
-      const offlineMenu: IMenuItem[] = [
-        {
-          id: 1,
-          parentId: null,
-          nombreItem: 'Nuevo RUFE',
-          ruta: '/rufe/new',
-          icono: 'add',
-          orden: 1,
-          subItems: null
-        }
-      ];
-      this.menuItemsSubject.next(offlineMenu);
-      return new BehaviorSubject<IMenuItem[]>(offlineMenu).asObservable();
+    const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+    if (!this.networkService.isOnline  || isOfflineSession) {
+      // Intenta recuperar el menú dinámico guardado en local
+      return new Observable<IMenuItem[]>(observer => {
+        localForage.getItem<IMenuItem[]>('dynamicMenu').then(menu => {
+          if (menu && menu.length > 0) {
+            this.menuItemsSubject.next(menu);
+            observer.next(menu);
+          } else {
+            // Si no hay menú guardado, muestra solo el menú mínimo
+            const offlineMenu: IMenuItem[] = [
+              {
+                id: 1,
+                parentId: null,
+                nombreItem: 'Nuevo RUFE',
+                ruta: '/rufe/new',
+                icono: 'add',
+                orden: 1,
+                subItems: null
+              }
+            ];
+            this.menuItemsSubject.next(offlineMenu);
+            observer.next(offlineMenu);
+          }
+          observer.complete();
+        });
+      });
     }
 
     if (!currentUser || currentUser.organizacionId === undefined) {
@@ -58,6 +71,8 @@ export class MenuService {
         tap(menuItems => {
           const sortedMenuItems = this.sortMenuItems(menuItems);
           this.menuItemsSubject.next(sortedMenuItems);
+          // Guarda el menú dinámico en local para uso offline
+          localForage.setItem('dynamicMenu', sortedMenuItems);
           console.log('Dynamic menu loaded:', sortedMenuItems);
         }),
         catchError(this.handleError)

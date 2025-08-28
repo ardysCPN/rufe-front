@@ -1,30 +1,46 @@
 // src/app/core/guards/auth.guard.ts
 
+/**
+ * AuthGuard para proteger rutas en la aplicación.
+ * 
+ * Este guard verifica si el usuario está autenticado y si su token es válido.
+ * Permite el acceso en los siguientes casos:
+ *   - Si el usuario está online y tiene un token válido (verificado con el backend).
+ *   - Si el usuario está offline y existe una sesión offline válida (último usuario logueado).
+ * 
+ * Si ninguna de estas condiciones se cumple, redirige al usuario a la página de login y muestra un mensaje informativo.
+ * 
+ * Lógica principal:
+ * - Si el usuario está offline, permite el acceso solo si existe el email del último usuario logueado y el flag de sesión offline.
+ * - Si el usuario está online y tiene token, valida el token con el backend.
+ * - Si el token es inválido, expirado o hay error de validación, redirige al login.
+ * - Si no hay usuario ni token, redirige al login.
+ */
+
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
-import { MatSnackBar } from '@angular/material/snack-bar'; // For notifications
+import { MatSnackBar } from '@angular/material/snack-bar'; // Para notificaciones
 import { of } from 'rxjs';
-import { NetworkService } from '../services/network.service'; // Importa el servicio de red
+import { NetworkService } from '../services/network.service'; // Servicio de red
 
-/**
- * AuthGuard to protect routes.
- * Checks if the user is authenticated and if their token is still valid.
- */
 export const AuthGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const snackBar = inject(MatSnackBar);
   const networkService = inject(NetworkService);
 
-  // Take the current user value and then map it to a boolean
+  // Toma el valor actual del usuario y lo mapea a un booleano
   return authService.currentUser.pipe(
-    take(1), // Take only the first emission and then complete
+    take(1), // Solo toma la primera emisión y luego completa
     switchMap(user => {
-      if (!networkService.isOnline) {
-        const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
-        if (lastUserEmail) {
+      // Permitir acceso si hay sesión offline activa
+      const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
+      const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+
+      if (!networkService.isOnline || isOfflineSession) {
+        if (lastUserEmail && isOfflineSession) {
           return of(true);
         } else {
           snackBar.open('Solo el último usuario logueado puede trabajar sin conexión.', 'Cerrar', {
@@ -36,34 +52,43 @@ export const AuthGuard: CanActivateFn = (route, state) => {
         }
       }
 
+      // Modo online: valida el token con el backend
       if (user && user.token) {
-        // User is logged in, now validate the token with the backend (or local check)
         return authService.validateTokenAndKeepAlive().pipe(
           map(isValid => {
             if (isValid) {
-              return true; // Token is valid, allow access
+              return true; // Token válido, permite acceso
             } else {
-              // Token invalid/expired after validation attempt, AuthService.logout() should have been called
+              // Token inválido/expirado, redirige al login
               snackBar.open('Tu sesión ha expirado o es inválida. Por favor, inicia sesión de nuevo.', 'Cerrar', {
                 duration: 5000,
                 panelClass: ['snackbar-error']
               });
-              router.navigate(['/login']); // Ensure navigation to login
+              router.navigate(['/login']);
               return false;
             }
           }),
           catchError(() => {
-            // Error during validation (e.g., network error, backend down)
-            snackBar.open('Error al validar la sesión. Por favor, inicia sesión de nuevo.', 'Cerrar', {
-              duration: 5000,
-              panelClass: ['snackbar-error']
-            });
-            router.navigate(['/login']);
-            return of(false);
+            // Error al validar el token (por ejemplo, backend caído)
+            if (user?.email && lastUserEmail && user.email === lastUserEmail) {
+              snackBar.open('No se pudo validar la sesión con el servidor, pero puedes trabajar como el último usuario logueado.', 'Cerrar', {
+                duration: 5000,
+                panelClass: ['snackbar-success']
+              });
+              localStorage.setItem('isOfflineSession', 'true');
+              return of(true);
+            } else {
+              snackBar.open('Error al validar la sesión. Por favor, inicia sesión de nuevo.', 'Cerrar', {
+                duration: 5000,
+                panelClass: ['snackbar-error']
+              });
+              router.navigate(['/login']);
+              return of(false);
+            }
           })
         );
       } else {
-        // No user or token found, redirect to login
+        // No hay usuario ni token, redirige al login
         snackBar.open('Debes iniciar sesión para acceder a esta página.', 'Cerrar', {
           duration: 3000,
           panelClass: ['snackbar-warn']

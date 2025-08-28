@@ -154,12 +154,11 @@ export class LoginComponent {
     if (!this.networkService.isOnline) {
       const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
       if (lastUserEmail && lastUserEmail === email) {
-        // Permite acceso offline solo si el email coincide
         this.snackBar.open('Acceso offline permitido para el último usuario logueado.', 'Cerrar', {
           duration: 3000,
           panelClass: ['snackbar-success']
         });
-        // Opcional: puedes guardar un flag de sesión offline si lo necesitas
+        localStorage.setItem('isOfflineSession', 'true');
         this.router.navigate(['/dashboard']);
       } else {
         this.snackBar.open('Sin conexión. Solo el último usuario logueado puede acceder.', 'Cerrar', {
@@ -167,11 +166,11 @@ export class LoginComponent {
           panelClass: ['snackbar-error']
         });
       }
-      return;
+      return; // <-- Aquí se detiene el flujo y NO llama al backend
     }
 
+    // Solo intenta login online si hay conexión
     this.loading = true;
-
     this.authService.login({ email, password, organizacion }).subscribe({
       next: (user) => {
         localStorage.setItem('lastLoggedUserEmail', email);
@@ -180,12 +179,37 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        const errorMessage = err.message || 'Error al iniciar sesión. Verifica tus credenciales.';
-        this.snackBar.open(errorMessage, 'Cerrar', {
+        let errorMessage = 'Error al iniciar sesión.';
+
+        // Si el error es el objeto personalizado
+        if (err && err.user) {
+          errorMessage = err.user;
+          // Si es error de red y el email coincide, permite acceso offline
+          if (err.status === 0) {
+            const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
+            if (lastUserEmail && lastUserEmail === email) {
+              this.snackBar.open(
+                'No se pudo conectar con el servidor, pero puedes trabajar en modo offline como el último usuario logueado.',
+                'Cerrar',
+                { duration: 5000, panelClass: ['snackbar-success'] }
+              );
+              localStorage.setItem('isOfflineSession', 'true');
+              this.router.navigate(['/dashboard']);
+              return;
+            }
+          }
+          // Imprime el error técnico solo en consola
+          console.error('Login error:', err.technical);
+        } else {
+          // Fallback para errores no controlados
+          console.error('Login error:', err);
+          this.snackBar.open(errorMessage, 'Cerrar', {
           duration: 5000,
           panelClass: ['snackbar-error']
         });
-        console.error('Login error:', err);
+        }
+
+        
       },
       complete: () => {
         this.loading = false;

@@ -13,13 +13,13 @@ import {
   ICatalogoGenero,
   ICatalogoParentesco,
   ICatalogoZona,
-  // NEW IMPORTS
   ICatalogoTipoUbicacionBien,
   ICatalogoTipoAlojamientoActual,
   ICatalogoFormaTenenciaBien,
   ICatalogoEstadoBien,
   ICatalogoTipoBien,
-  ICatalogoPertenenciaEtnica
+  ICatalogoPertenenciaEtnica,
+  ICatalogoEvento
 } from '../../models/catalogs.model';
 import { IRufeLocal } from '../../models/rufe.model';
 import { IIntegranteLocal } from '../../models/integrant.model';
@@ -33,14 +33,13 @@ export class AppDB extends Dexie {
   catalogos_generos!: Table<ICatalogoGenero, number>;
   catalogos_parentescos!: Table<ICatalogoParentesco, number>;
   catalogos_zonas!: Table<ICatalogoZona, number>;
-
-  // NEW TABLES FOR NEW CATALOGS
   catalogos_tipo_ubicacion_bien!: Table<ICatalogoTipoUbicacionBien, number>;
   catalogos_tipo_alojamiento_actual!: Table<ICatalogoTipoAlojamientoActual, number>;
   catalogos_forma_tenencia_bien!: Table<ICatalogoFormaTenenciaBien, number>;
   catalogos_estado_bien!: Table<ICatalogoEstadoBien, number>;
   catalogos_tipo_bien!: Table<ICatalogoTipoBien, number>;
   catalogos_pertenencia_etnica!: Table<ICatalogoPertenenciaEtnica, number>;
+  catalogos_eventos!: Table<ICatalogoEvento, number>;
 
 
   constructor() {
@@ -54,13 +53,13 @@ export class AppDB extends Dexie {
       catalogos_generos: '&id, nombre',
       catalogos_parentescos: '&id, nombre',
       catalogos_zonas: '&id, nombre',
-      // NEW STORES
       catalogos_tipo_ubicacion_bien: '&id, nombre',
       catalogos_tipo_alojamiento_actual: '&id, nombre',
       catalogos_forma_tenencia_bien: '&id, nombre',
       catalogos_estado_bien: '&id, nombre',
       catalogos_tipo_bien: '&id, nombre',
       catalogos_pertenencia_etnica: '&id, nombre',
+      catalogos_eventos: '&id, nombre',
     });
   }
 }
@@ -442,6 +441,59 @@ export class DatabaseService {
     }
   }
 
+  public async bulkPutEventos(eventos: ICatalogoEvento[]): Promise<void> {
+    if (!this.isBrowser) return;
+    try {
+      await this.db.catalogos_eventos.bulkPut(eventos);
+      console.log(`Se han guardado ${eventos.length} eventos.`);
+    } catch (error) {
+      console.error('Error al guardar eventos en bulk:', error);
+      throw error;
+    }
+  }
+
+  public async getAllEventos(): Promise<ICatalogoEvento[]> {
+    if (!this.isBrowser) return [];
+    try {
+      return await this.db.catalogos_eventos.toArray();
+    } catch (error) {
+      console.error('Error al obtener todos los eventos:', error);
+      return [];
+    }
+  }
+  
+  public async bulkPutTipoDocumento(items: ICatalogoTipoDocumento[]): Promise<void> {
+    if (!this.isBrowser) return;
+    try {
+      await this.db.catalogos_tipos_documento.bulkPut(items);
+      console.log(`Se han guardado ${items.length} tipos de documento.`);
+    } catch (error) {
+      console.error('Error al guardar tipos de documento en bulk:', error);
+      throw error;
+    }
+  }
+
+  public async bulkPutParentesco(items: ICatalogoParentesco[]): Promise<void> {
+    if (!this.isBrowser) return;
+    try {
+      await this.db.catalogos_parentescos.bulkPut(items);
+      console.log(`Se han guardado ${items.length} parentescos.`);
+    } catch (error) {
+      console.error('Error al guardar parentescos en bulk:', error);
+      throw error;
+    }
+  }
+
+  public async bulkPutGenero(items: ICatalogoGenero[]): Promise<void> {
+    if (!this.isBrowser) return;
+    try {
+      await this.db.catalogos_generos.bulkPut(items);
+      console.log(`Se han guardado ${items.length} géneros.`);
+    } catch (error) {
+      console.error('Error al guardar géneros en bulk:', error);
+      throw error;
+    }
+  }
 
   public async clearAllTables(): Promise<void> {
     if (!this.isBrowser) return;
@@ -454,13 +506,13 @@ export class DatabaseService {
       await this.db.catalogos_generos.clear();
       await this.db.catalogos_parentescos.clear();
       await this.db.catalogos_zonas.clear();
-      // NEW CLEAR FOR NEW CATALOGS
       await this.db.catalogos_tipo_ubicacion_bien.clear();
       await this.db.catalogos_tipo_alojamiento_actual.clear();
       await this.db.catalogos_forma_tenencia_bien.clear();
       await this.db.catalogos_estado_bien.clear();
       await this.db.catalogos_tipo_bien.clear();
       await this.db.catalogos_pertenencia_etnica.clear();
+      await this.db.catalogos_eventos.clear();
 
       console.log('Todas las tablas de IndexedDB han sido limpiadas.');
     } catch (error) {

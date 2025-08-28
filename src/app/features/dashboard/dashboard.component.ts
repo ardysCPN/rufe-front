@@ -1,10 +1,12 @@
 // src/app/features/dashboard/dashboard.component.ts
 
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MenuService } from '../../core/services/menu.service';
+import { NetworkService } from '../../core/services/network.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -81,6 +83,21 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `
 })
-export class DashboardComponent {
-  // Placeholder for dashboard logic
+export class DashboardComponent implements OnInit {
+  currentUser: any; // Suponiendo que tienes un objeto de usuario actual
+  
+  constructor(private menuService: MenuService, private networkService: NetworkService) {}
+
+  ngOnInit(): void {
+    const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+    if (isOfflineSession || !this.networkService.isOnline) {
+      // Cargar datos y menú desde IndexedDB
+      this.menuService.getDynamicMenu(null).subscribe();
+      // Aquí puedes cargar otros datos desde IndexedDB
+    } else {
+      // Cargar datos y menú desde el backend normalmente
+      this.menuService.getDynamicMenu(this.currentUser).subscribe();
+      // Aquí puedes cargar otros datos desde el backend
+    }
+  }
 }

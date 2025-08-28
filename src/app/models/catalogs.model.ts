@@ -30,6 +30,7 @@ export interface ICatalogoFormaTenenciaBien extends ICatalogoItemResponse {}
 export interface ICatalogoEstadoBien extends ICatalogoItemResponse {}
 export interface ICatalogoTipoBien extends ICatalogoItemResponse {}
 export interface ICatalogoPertenenciaEtnica extends ICatalogoItemResponse {}
+export interface ICatalogoEvento extends ICatalogoItemResponse {}
 
 
 /**

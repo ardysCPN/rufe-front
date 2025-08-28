@@ -15,7 +15,8 @@ import {
   // NEW IMPORTS
   ICatalogoTipoUbicacionBien, ICatalogoTipoAlojamientoActual,
   ICatalogoFormaTenenciaBien, ICatalogoEstadoBien,
-  ICatalogoTipoBien, ICatalogoPertenenciaEtnica
+  ICatalogoTipoBien, ICatalogoPertenenciaEtnica,
+  ICatalogoEvento
 } from '../../models/catalogs.model';
 import { MenuService } from './menu.service';
 
@@ -287,40 +288,34 @@ export class AuthService {
 
     // Define all catalog requests
     const catalogRequests = {
-      // municipios: this.http.get<ICatalogoMunicipio[]>(`${environment.apiUrl}/api/catalogos/municipios`),
-      // departamentos: this.http.get<ICatalogoDepartamento[]>(`${environment.apiUrl}/api/catalogos/departamentos`),
-      // tiposDocumento: this.http.get<ICatalogoTipoDocumento[]>(`${environment.apiUrl}/api/catalogos/tipo-documento`), // Corrected endpoint
-      // generos: this.http.get<ICatalogoGenero[]>(`${environment.apiUrl}/api/catalogos/genero`), // Corrected endpoint
-      // parentescos: this.http.get<ICatalogoParentesco[]>(`${environment.apiUrl}/api/catalogos/parentesco`), // Corrected endpoint
-      // zonas: this.http.get<ICatalogoZona[]>(`${environment.apiUrl}/api/catalogos/zonas`),
-
-      // NEW CATALOG ENDPOINTS
+      departamentos: this.http.get<ICatalogoDepartamento[]>(`${environment.apiUrl}/api/catalogos/departamentos`),
+      municipios: this.http.get<ICatalogoMunicipio[]>(`${environment.apiUrl}/api/catalogos/municipios`),
+      eventos: this.http.get<ICatalogoEvento[]>(`${environment.apiUrl}/api/catalogos/eventos`),
       tipoUbicacionBien: this.http.get<ICatalogoTipoUbicacionBien[]>(`${environment.apiUrl}/api/catalogos/tipo-ubicacion-bien`),
       tipoAlojamientoActual: this.http.get<ICatalogoTipoAlojamientoActual[]>(`${environment.apiUrl}/api/catalogos/tipo-alojamiento-actual`),
       formaTenenciaBien: this.http.get<ICatalogoFormaTenenciaBien[]>(`${environment.apiUrl}/api/catalogos/forma-tenencia-bien`),
       estadoBien: this.http.get<ICatalogoEstadoBien[]>(`${environment.apiUrl}/api/catalogos/estado-bien`),
       tipoBien: this.http.get<ICatalogoTipoBien[]>(`${environment.apiUrl}/api/catalogos/tipo-bien`),
-      pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`), // Corrected endpoint
+      tipoDocumento: this.http.get<ICatalogoTipoDocumento[]>(`${environment.apiUrl}/api/catalogos/tipo-documento`),
+      parentesco: this.http.get<ICatalogoParentesco[]>(`${environment.apiUrl}/api/catalogos/parentesco`),
+      genero: this.http.get<ICatalogoGenero[]>(`${environment.apiUrl}/api/catalogos/genero`),
+      pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`)
     };
 
     // Use forkJoin to wait for all catalog requests to complete
     return forkJoin(catalogRequests).pipe(
       tap(results => {
-        console.log('All catalogs fetched from backend:', results);
-        // Store each catalog in IndexedDB
-        // this.dbService.bulkPutMunicipios(results.municipios);
-        // this.dbService.bulkPutDepartamentos(results.departamentos);
-        // this.dbService.bulkPutTiposDocumento(results.tiposDocumento);
-        // this.dbService.bulkPutGeneros(results.generos);
-        // this.dbService.bulkPutParentescos(results.parentescos);
-        // this.dbService.bulkPutZonas(results.zonas);
-
-        // NEW CATALOGS STORAGE
+        this.dbService.bulkPutDepartamentos(results.departamentos);
+        this.dbService.bulkPutMunicipios(results.municipios);
+        this.dbService.bulkPutEventos(results.eventos);
         this.dbService.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
         this.dbService.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
         this.dbService.bulkPutFormaTenenciaBien(results.formaTenenciaBien);
         this.dbService.bulkPutEstadoBien(results.estadoBien);
         this.dbService.bulkPutTipoBien(results.tipoBien);
+        this.dbService.bulkPutTipoDocumento(results.tipoDocumento);
+        this.dbService.bulkPutParentesco(results.parentesco);
+        this.dbService.bulkPutGenero(results.genero);
         this.dbService.bulkPutPertenenciaEtnica(results.pertenenciaEtnica);
 
         console.log('All catalogs stored in IndexedDB.');
@@ -334,26 +329,35 @@ export class AuthService {
   }
 
   private handleError(error: HttpErrorResponse) {
-    let errorMessage = 'An unknown error occurred!';
+    let errorMessage = '¡Ocurrió un error inesperado!';
+    let userMessage = 'Error al iniciar sesión.';
+
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Error: ${error.error.message}`;
+      errorMessage = `Error de cliente: ${error.error.message}`;
+      userMessage = 'Error de red o del navegador. Verifica tu conexión.';
     } else {
-      const backendError = error.error;
-      if (typeof backendError === 'string') {
-        errorMessage = `Error Code: ${error.status}\nMessage: ${backendError}`;
-      } else if (backendError && backendError.message) {
-        errorMessage = `Error Code: ${error.status}\nMessage: ${backendError.message}`;
+      if (error.status === 0) {
+        errorMessage = `Error Code: 0\nMessage: No se pudo conectar con el servidor (${error.url}).`;
+        userMessage = 'No se pudo conectar con el servidor. Puedes trabajar en modo offline si ya has iniciado sesión antes.';
+      } else if (error.status === 401) {
+        errorMessage = `Error Code: 401\nMessage: Credenciales inválidas o sesión expirada.`;
+        userMessage = 'Credenciales incorrectas. Por favor, verifica tu correo y contraseña.';
+      } else if (error.status === 403) {
+        errorMessage = `Error Code: 403\nMessage: No tiene permisos para realizar esta acción.`;
+        userMessage = 'No tienes permisos para acceder.';
+      } else if (error.error && error.error.message) {
+        errorMessage = `Error Code: ${error.status}\nMessage: ${error.error.message}`;
+        userMessage = error.error.message;
       } else {
         errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
-      }
-
-      if (error.status === 401) {
-        errorMessage = 'Credenciales inválidas o sesión expirada.';
-      } else if (error.status === 403) {
-        errorMessage = 'No tiene permisos para realizar esta acción.';
+        userMessage = 'Error inesperado. Intenta nuevamente.';
       }
     }
+
+    // Imprime el error técnico en consola para desarrolladores
     console.error(errorMessage);
-    return throwError(() => new Error(errorMessage));
+
+    // Retorna un error con el mensaje para el usuario
+    return throwError(() => ({ technical: errorMessage, user: userMessage, status: error.status }));
   }
 }
