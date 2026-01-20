@@ -1,23 +1,44 @@
 import { SyncStatus } from './catalogs.model';
 
 export interface IRufeLocal {
-  cliente_id: string; // UUID generated on the client
-  id?: number; // Server ID (bigserial), optional until synchronization
+  cliente_id: string; // UUID generado en el cliente
+  id?: number; // ID del servidor (bigserial), opcional hasta la sincronización
   estado_sincronizacion: SyncStatus;
-  // Other RUFE form fields
-  nombre_titular: string;
-  apellido_titular: string;
-  fecha_creacion_offline: Date; // Timestamp when created offline
-  fecha_ultima_actualizacion_offline: Date; // Timestamp of the last offline modification
-  tipo_documento_id: number;
-  numero_documento: string;
-  genero_id: number;
-  fecha_nacimiento: string; // Or Date, depending on how you handle it
+  fecha_creacion_offline: Date;
+  fecha_ultima_actualizacion_offline: Date;
+
+  // Datos del Formulario
+  departamentoId: number;
+  municipioId: number;
+  eventoId: number;
+  fechaEvento: string;
+  fechaRufe: string;
+  ubicacionTipo: string; // 'urbano' o 'rural'
+  corregimiento?: string | null;
+  veredaSectorBarrio: string;
   direccion: string;
-  municipio_id: number;
-  departamento_id: number;
-  zona_id: number; // Urban, rural, etc.
-  ubicacion_lat: number;
-  ubicacion_lon: number;
-  telefono_contacto: string;
+  alojamientoActual: string;
+  formaTenencia: string;
+  estadoBien: string;
+  tipoBien: string;
+  especie?: string | null;
+  cantidadPecuaria?: number | null;
+  observaciones?: string | null;
 }
+
+export interface IIntegranteLocal {
+  id?: number; // Llave primaria autoincremental en IndexedDB
+  rufe_cliente_id: string; // Llave foránea a IRufeLocal.cliente_id
+
+  // Datos del integrante
+  nombres: string;
+  apellidos: string;
+  tipoDocumento: number;
+  numeroDocumento: string;
+  fechaNacimiento: string;
+  genero: number;
+  parentesco: number;
+  etnia: number | null;
+  telefono: string;
+}
+

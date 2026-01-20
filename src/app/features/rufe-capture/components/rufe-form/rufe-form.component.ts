@@ -10,23 +10,29 @@ import { InputComponent } from '../../../../shared/components/input/input.compon
 import { SelectComponent } from '../../../../shared/components/select/select.component';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 
-// Import services
-import { DatabaseService } from '../../../../core/services/database.service';
+// Import services and repositories
+import { RufeRepository } from '../../../../core/repositories/rufe.repository';
+import { CatalogRepository } from '../../../../core/repositories/catalog.repository';
+import { NetworkService } from '../../../../core/services/network.service';
 
 // Custom validator for unique document numbers within the FormArray
 function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any } | null {
-  if (!control.parent) {
+  // The control is the 'numeroDocumento' FormControl.
+  // Its parent is the FormGroup for a person.
+  // Its parent's parent is the 'personas' FormArray.
+  if (!control.parent || !control.parent.parent) {
     return null;
   }
   const formArray = control.parent.parent as FormArray;
-  if (!formArray) {
+
+  // Don't validate if the value is empty, let the `required` validator handle it.
+  if (!control.value) {
     return null;
   }
 
   const duplicates = formArray.controls
-    .filter(
-      (c, index) => c !== control && c.get('numeroDocumento')?.value === control.value
-    );
+    // We need to compare against other FormGroups in the FormArray, not against our own.
+    .filter(group => group !== control.parent && group.get('numeroDocumento')?.value === control.value);
 
   return duplicates.length > 0 ? { uniqueDocument: true } : null;
 }
@@ -61,7 +67,12 @@ export class RufeFormComponent implements OnInit {
   estadoBien: ICatalogoItemResponse[] = [];
   tipoBien: ICatalogoItemResponse[] = [];
 
-  constructor(private fb: FormBuilder, private dbService: DatabaseService) {
+  constructor(
+    private fb: FormBuilder,
+    private rufeRepository: RufeRepository,
+    private catalogRepository: CatalogRepository,
+    private network: NetworkService
+  ) {
     this.rufeForm = this.fb.group({
       departamento: [null, Validators.required],
       municipio: [{ value: null, disabled: true }, Validators.required],
@@ -105,7 +116,7 @@ export class RufeFormComponent implements OnInit {
 
     // Listen for department changes to filter municipalities
     this.rufeForm.get('departamento')?.valueChanges.subscribe(departmentId => {
-      console.log('Departamento seleccionado:', departmentId);
+      // Logic for department change
       if (departmentId) {
         this.onDepartmentChange(departmentId);
       }
@@ -114,22 +125,20 @@ export class RufeFormComponent implements OnInit {
 
   async loadCatalogs(): Promise<void> {
     try {
-      this.departments = await this.dbService.getAllDepartamentos();
-      this.allMunicipalities = await this.dbService.getAllMunicipios();
-      this.events = await this.dbService.getAllEventos();
-      this.documentTypes = await this.dbService.getAllTiposDocumento();
-      this.genders = await this.dbService.getAllGeneros();
-      this.relationships = await this.dbService.getAllParentescos();
-      this.ethnicities = await this.dbService.getAllPertenenciaEtnica();
-      this.alojamiento = await this.dbService.getAllTipoAlojamientoActual();
-      this.tenencia = await this.dbService.getAllFormaTenenciaBien();
-      this.estadoBien = await this.dbService.getAllEstadoBien();
-      this.tipoBien = await this.dbService.getAllTipoBien();
-      // TODO: Cargar el catálogo de unidades de medida si existe en el servicio.
-      console.log('Catálogos cargados desde IndexedDB');
+      this.departments = await this.catalogRepository.getAllDepartamentos();
+      this.allMunicipalities = await this.catalogRepository.getAllMunicipios();
+      this.events = await this.catalogRepository.getAllEventos();
+      this.documentTypes = await this.catalogRepository.getAllTiposDocumento();
+      this.genders = await this.catalogRepository.getAllGeneros();
+      this.relationships = await this.catalogRepository.getAllParentescos();
+      this.ethnicities = await this.catalogRepository.getAllPertenenciaEtnica();
+      this.alojamiento = await this.catalogRepository.getAllTipoAlojamientoActual();
+      this.tenencia = await this.catalogRepository.getAllFormaTenenciaBien();
+      this.estadoBien = await this.catalogRepository.getAllEstadoBien();
+      this.tipoBien = await this.catalogRepository.getAllTipoBien();
+      // TODO: Cargar el catálogo de unidades de medida si existe en el repositorio.
     } catch (error) {
-      console.error('Error al cargar los catálogos desde IndexedDB:', error);
-      // Opcional: Manejar el error, por ejemplo, mostrando un mensaje al usuario.
+      // Silent catch for production log or use a logger service
     }
   }
 
@@ -201,14 +210,80 @@ export class RufeFormComponent implements OnInit {
   }
 
   // Form Actions
-  onSubmit(): void {
+  private logValidationErrors(group: FormGroup | FormArray, parentPath: string[] = []) {
+    Object.keys(group.controls).forEach(key => {
+      const control = group.get(key);
+      const path = [...parentPath, key];
+      if (control instanceof FormGroup || control instanceof FormArray) {
+        if (control.invalid) {
+          this.logValidationErrors(control, path);
+        }
+      } else {
+        if (control && control.invalid) {
+          // Should use a logger service
+        }
+      }
+    });
+  }
+
+  async onSubmit(): Promise<void> {
     if (this.rufeForm.valid) {
-      console.log('Formulario RUFE válido. Datos a enviar:', this.rufeForm.value);
-      alert('Formulario guardado exitosamente!');
+      // Usar getRawValue() para incluir los valores de campos deshabilitados (como el municipio).
+      const rufeValue = this.rufeForm.getRawValue();
+
+      try {
+        // Guardar RUFE + personas en DB local
+        const rufeId = await this.rufeRepository.saveRufeWithIntegrantes(
+          {
+            departamentoId: rufeValue.departamento,
+            municipioId: rufeValue.municipio,
+            eventoId: rufeValue.evento,
+            fechaEvento: rufeValue.fechaEvento,
+            fechaRufe: rufeValue.fechaRufe,
+            ubicacionTipo: rufeValue.ubicacionTipo,
+            corregimiento: rufeValue.corregimiento,
+            veredaSectorBarrio: rufeValue.veredaSectorBarrio,
+            direccion: rufeValue.direccion,
+            alojamientoActual: rufeValue.alojamientoActual,
+            formaTenencia: rufeValue.formaTenencia,
+            estadoBien: rufeValue.estadoBien,
+            tipoBien: rufeValue.tipoBien,
+            especie: rufeValue.especie,
+            cantidadPecuaria: rufeValue.cantidadPecuaria,
+            observaciones: rufeValue.observaciones
+          },
+          rufeValue.personas.map((p: any) => ({
+            nombres: p.nombres,
+            apellidos: p.apellidos,
+            tipoDocumento: p.tipoDocumento,
+            numeroDocumento: p.numeroDocumento,
+            fechaNacimiento: p.fechaNacimiento,
+            genero: p.genero,
+            parentesco: p.parentesco,
+            etnia: p.etnia,
+            telefono: p.telefono
+          }))
+        );
+
+        // TODO: Replace with Toast Notification
+        const message = this.network.isOnline
+          ? 'Formulario guardado localmente y pendiente de sincronizar.'
+          : 'Formulario guardado offline. Se sincronizará cuando vuelva la conexión.';
+
+        // Temporarily using console instead of alert
+        // console.log(message); 
+
+        this.onClear();
+
+      } catch (error) {
+        // console.error('Error al guardar en IndexedDB:', error);
+        // TODO: Show Error Toast
+      }
+
     } else {
       this.rufeForm.markAllAsTouched();
-      console.warn('Formulario inválido. Por favor, revisa los campos.');
-      alert('Formulario inválido. Por favor, revisa los campos.');
+      this.logValidationErrors(this.rufeForm);
+      // TODO: Show Warning Toast
     }
   }
 

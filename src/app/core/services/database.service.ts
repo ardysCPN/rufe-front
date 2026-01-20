@@ -3,30 +3,42 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import Dexie, { Table } from 'dexie';
-import { v4 as uuidv4 } from 'uuid';
 
 import {
-  SyncStatus,
   ICatalogoMunicipio,
   ICatalogoDepartamento,
   ICatalogoTipoDocumento,
   ICatalogoGenero,
   ICatalogoParentesco,
-  ICatalogoZona,
   ICatalogoTipoUbicacionBien,
   ICatalogoTipoAlojamientoActual,
   ICatalogoFormaTenenciaBien,
   ICatalogoEstadoBien,
   ICatalogoTipoBien,
   ICatalogoPertenenciaEtnica,
-  ICatalogoEvento
+  ICatalogoEvento,
+  ICatalogoZona
 } from '../../models/catalogs.model';
 import { IRufeLocal } from '../../models/rufe.model';
 import { IIntegranteLocal } from '../../models/integrant.model';
 
-export class AppDB extends Dexie {
-  rufe!: Table<IRufeLocal, string>;
-  integrantes!: Table<IIntegranteLocal, string>;
+/**
+ * Simple meta interface for storing small key/value metadata (e.g. lastSyncTimestamp)
+ */
+interface IMeta {
+  key: string;
+  value: any;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class DatabaseService extends Dexie {
+  // --- Tables ---
+  rufes!: Table<IRufeLocal, string>; // Primary key is cliente_id (string/UUID)
+  integrantes!: Table<IIntegranteLocal, string>; // Primary key is cliente_id (string/UUID)
+
+  // Catalog tables
   catalogos_municipios!: Table<ICatalogoMunicipio, number>;
   catalogos_departamentos!: Table<ICatalogoDepartamento, number>;
   catalogos_tipos_documento!: Table<ICatalogoTipoDocumento, number>;
@@ -41,11 +53,36 @@ export class AppDB extends Dexie {
   catalogos_pertenencia_etnica!: Table<ICatalogoPertenenciaEtnica, number>;
   catalogos_eventos!: Table<ICatalogoEvento, number>;
 
+  // Meta table for small app metadata
+  meta!: Table<IMeta, string>; // Primary key is key (string)
 
-  constructor() {
-    super('RufeOfflineDB');
+  private isBrowser: boolean;
+  private dbReadyPromise: Promise<void>;
+  private resolveDbReady!: () => void;
+
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    super('RufeOfflineDB'); // Database name
+    this.isBrowser = isPlatformBrowser(this.platformId);
+
+    if (this.isBrowser) {
+      this.dbReadyPromise = new Promise(resolve => {
+        this.resolveDbReady = resolve;
+      });
+      this.defineSchema();
+      this.openDatabase();
+    } else {
+      // In SSR, db is not available. Resolve promise immediately.
+      this.dbReadyPromise = Promise.resolve();
+      console.log('Skipping IndexedDB initialization on server (SSR).');
+    }
+  }
+
+  private defineSchema(): void {
+    // version 1 schema: add all tables (including meta)
     this.version(1).stores({
-      rufe: '&cliente_id, id, estado_sincronizacion, fecha_creacion_offline',
+      rufes: '&cliente_id, id, estado_sincronizacion, fecha_creacion_offline',
       integrantes: '&cliente_id, id, registro_rufe_cliente_id, estado_sincronizacion',
       catalogos_municipios: '&id, nombre, departamento_id',
       catalogos_departamentos: '&id, nombre',
@@ -60,497 +97,95 @@ export class AppDB extends Dexie {
       catalogos_tipo_bien: '&id, nombre',
       catalogos_pertenencia_etnica: '&id, nombre',
       catalogos_eventos: '&id, nombre',
+      meta: '&key'
     });
-  }
-}
-
-@Injectable({
-  providedIn: 'root'
-})
-export class DatabaseService {
-  private db: AppDB;
-  private isBrowser: boolean;
-
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
-    this.db = new AppDB();
-    if (this.isBrowser) {
-      this.openDatabase();
-    } else {
-      console.log('Skipping IndexedDB initialization on server (SSR).');
-    }
   }
 
   private async openDatabase(): Promise<void> {
     try {
-      await this.db.open();
+      await this.open();
       console.log('IndexedDB database opened and ready.');
+      this.resolveDbReady(); // Signal that the DB is ready
     } catch (error) {
       console.error('Error opening IndexedDB database:', error);
     }
   }
 
+  // All public methods should await this promise to ensure the DB is open.
+  public async ensureDbReady(): Promise<void> {
+    if (!this.isBrowser) {
+      return Promise.reject('Database operations are not available in SSR.');
+    }
+    return this.dbReadyPromise;
+  }
+
   public closeDatabase(): void {
     if (this.isBrowser) {
-      this.db.close();
+      this.close();
       console.log('IndexedDB database closed.');
     }
   }
 
-  public async addRufe(rufe: Omit<IRufeLocal, 'cliente_id' | 'estado_sincronizacion' | 'fecha_creacion_offline' | 'fecha_ultima_actualizacion_offline'>): Promise<string> {
-    if (!this.isBrowser) {
-      console.warn('Attempted to add RUFE in non-browser environment. Operation skipped.');
-      return Promise.resolve('');
-    }
-    const newRufe: IRufeLocal = {
-      ...rufe,
-      cliente_id: uuidv4(),
-      estado_sincronizacion: 'pendiente_crear',
-      fecha_creacion_offline: new Date(),
-      fecha_ultima_actualizacion_offline: new Date()
-    };
+  // ---------- META (last sync, etc.) ----------
+  // Keeping META here as it is very low level, but could also go to a MetaRepository.
+  // For simplicity keeping it here for now as it doesn't clutter as much as the others.
+
+  public async setMeta(key: string, value: any): Promise<void> {
+    await this.ensureDbReady();
     try {
-      const id = await this.db.rufe.add(newRufe);
-      console.log('Registro RUFE añadido:', newRufe);
-      return id;
+      await this.meta.put({ key, value });
     } catch (error) {
-      console.error('Error al añadir registro RUFE:', error);
+      console.error('Error al guardar meta:', error);
       throw error;
     }
   }
 
-  public async getRufe(clienteId: string): Promise<IRufeLocal | undefined> {
-    if (!this.isBrowser) return undefined;
+  public async getMeta<T = any>(key: string): Promise<T | undefined> {
+    await this.ensureDbReady();
     try {
-      return await this.db.rufe.get(clienteId);
+      const row = await this.meta.get(key);
+      return row?.value as T;
     } catch (error) {
-      console.error('Error al obtener registro RUFE:', error);
+      console.error('Error al leer meta:', error);
       return undefined;
     }
   }
 
-  public async getAllRufes(): Promise<IRufeLocal[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.rufe.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los registros RUFE:', error);
-      return [];
-    }
+  public async setLastSyncTimestamp(date: Date): Promise<void> {
+    return this.setMeta('lastSyncTimestamp', date.toISOString());
   }
 
-  public async updateRufe(clienteId: string, changes: Partial<IRufeLocal>): Promise<number> {
-    if (!this.isBrowser) return 0;
-    try {
-      const existingRufe = await this.db.rufe.get(clienteId);
-      if (existingRufe && existingRufe.estado_sincronizacion === 'sincronizado') {
-        changes.estado_sincronizacion = 'pendiente_actualizar';
-      }
-      changes.fecha_ultima_actualizacion_offline = new Date();
-      const updatedCount = await this.db.rufe.update(clienteId, changes);
-      console.log(`Registro RUFE ${clienteId} actualizado: ${updatedCount} fila(s) afectadas.`, changes);
-      return updatedCount;
-    } catch (error) {
-      console.error('Error al actualizar registro RUFE:', error);
-      throw error;
-    }
+  public async getLastSyncTimestamp(): Promise<Date | null> {
+    const iso = await this.getMeta<string>('lastSyncTimestamp');
+    return iso ? new Date(iso) : null;
   }
 
-  public async deleteRufe(clienteId: string): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      const existingRufe = await this.db.rufe.get(clienteId);
-      if (existingRufe && existingRufe.estado_sincronizacion === 'sincronizado') {
-        await this.db.rufe.update(clienteId, { estado_sincronizacion: 'pendiente_eliminar' });
-        console.log(`Registro RUFE ${clienteId} marcado para eliminación.`);
-      } else {
-        await this.db.rufe.delete(clienteId);
-        console.log(`Registro RUFE ${clienteId} eliminado directamente de IndexedDB.`);
-      }
-    } catch (error) {
-      console.error('Error al eliminar registro RUFE:', error);
-      throw error;
-    }
-  }
-
-  public async getPendingSyncRufes(): Promise<IRufeLocal[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.rufe
-        .where('estado_sincronizacion')
-        .anyOf(['pendiente_crear', 'pendiente_actualizar', 'pendiente_eliminar'])
-        .toArray();
-    } catch (error) {
-      console.error('Error al obtener registros RUFE pendientes de sincronización:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutMunicipios(municipios: ICatalogoMunicipio[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_municipios.bulkPut(municipios);
-      console.log(`Se han guardado ${municipios.length} municipios.`);
-    } catch (error) {
-      console.error('Error al guardar municipios en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllMunicipios(): Promise<ICatalogoMunicipio[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_municipios.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los municipios:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutDepartamentos(departamentos: ICatalogoDepartamento[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_departamentos.bulkPut(departamentos);
-      console.log(`Se han guardado ${departamentos.length} departamentos.`);
-    } catch (error) {
-      console.error('Error al guardar departamentos en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllDepartamentos(): Promise<ICatalogoDepartamento[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_departamentos.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los departamentos:', error);
-      return [];
-    }
-  }
-
-  public async countDepartamentos(): Promise<number> {
-    if (!this.isBrowser) return 0;
-    try {
-      const count = await this.db.catalogos_departamentos.count();
-      console.log(`Hay ${count} departamentos en IndexedDB.`);
-      return count;
-    } catch (error) {
-      console.error('Error al contar los departamentos:', error);
-      return 0;
-    }
-  }
-
-  public async bulkPutTiposDocumento(tipos: ICatalogoTipoDocumento[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_tipos_documento.bulkPut(tipos);
-      console.log(`Se han guardado ${tipos.length} tipos de documento.`);
-    } catch (error) {
-      console.error('Error al guardar tipos de documento en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllTiposDocumento(): Promise<ICatalogoTipoDocumento[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_tipos_documento.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los tipos de documento:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutGeneros(generos: ICatalogoGenero[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_generos.bulkPut(generos);
-      console.log(`Se han guardado ${generos.length} géneros.`);
-    } catch (error) {
-      console.error('Error al guardar géneros en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllGeneros(): Promise<ICatalogoGenero[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_generos.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los géneros:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutParentescos(parentescos: ICatalogoParentesco[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_parentescos.bulkPut(parentescos);
-      console.log(`Se han guardado ${parentescos.length} parentescos.`);
-    } catch (error) {
-      console.error('Error al guardar parentescos en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllParentescos(): Promise<ICatalogoParentesco[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_parentescos.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los parentescos:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutZonas(zonas: ICatalogoZona[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_zonas.bulkPut(zonas);
-      console.log(`Se han guardado ${zonas.length} zonas.`);
-    } catch (error) {
-      console.error('Error al guardar zonas en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllZonas(): Promise<ICatalogoZona[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_zonas.toArray();
-    } catch (error) {
-      console.error('Error al obtener todas las zonas:', error);
-      return [];
-    }
-  }
-
-  // NEW BULK PUT AND GET ALL METHODS FOR NEW CATALOGS
-  public async bulkPutTipoUbicacionBien(items: ICatalogoTipoUbicacionBien[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_tipo_ubicacion_bien.bulkPut(items);
-      console.log(`Se han guardado ${items.length} tipos de ubicación de bien.`);
-    } catch (error) {
-      console.error('Error al guardar tipos de ubicación de bien en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllTipoUbicacionBien(): Promise<ICatalogoTipoUbicacionBien[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_tipo_ubicacion_bien.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los tipos de ubicación de bien:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutTipoAlojamientoActual(items: ICatalogoTipoAlojamientoActual[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_tipo_alojamiento_actual.bulkPut(items);
-      console.log(`Se han guardado ${items.length} tipos de alojamiento actual.`);
-    } catch (error) {
-      console.error('Error al guardar tipos de alojamiento actual en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllTipoAlojamientoActual(): Promise<ICatalogoTipoAlojamientoActual[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_tipo_alojamiento_actual.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los tipos de alojamiento actual:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutFormaTenenciaBien(items: ICatalogoFormaTenenciaBien[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_forma_tenencia_bien.bulkPut(items);
-      console.log(`Se han guardado ${items.length} formas de tenencia de bien.`);
-    } catch (error) {
-      console.error('Error al guardar formas de tenencia de bien en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllFormaTenenciaBien(): Promise<ICatalogoFormaTenenciaBien[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_forma_tenencia_bien.toArray();
-    } catch (error) {
-      console.error('Error al obtener todas las formas de tenencia de bien:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutEstadoBien(items: ICatalogoEstadoBien[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_estado_bien.bulkPut(items);
-      console.log(`Se han guardado ${items.length} estados de bien.`);
-    } catch (error) {
-      console.error('Error al guardar estados de bien en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllEstadoBien(): Promise<ICatalogoEstadoBien[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_estado_bien.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los estados de bien:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutTipoBien(items: ICatalogoTipoBien[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_tipo_bien.bulkPut(items);
-      console.log(`Se han guardado ${items.length} tipos de bien.`);
-    } catch (error) {
-      console.error('Error al guardar tipos de bien en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllTipoBien(): Promise<ICatalogoTipoBien[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_tipo_bien.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los tipos de bien:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutPertenenciaEtnica(items: ICatalogoPertenenciaEtnica[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_pertenencia_etnica.bulkPut(items);
-      console.log(`Se han guardado ${items.length} pertenencias étnicas.`);
-    } catch (error) {
-      console.error('Error al guardar pertenencias étnicas en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllPertenenciaEtnica(): Promise<ICatalogoPertenenciaEtnica[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_pertenencia_etnica.toArray();
-    } catch (error) {
-      console.error('Error al obtener todas las pertenencias étnicas:', error);
-      return [];
-    }
-  }
-
-  public async bulkPutEventos(eventos: ICatalogoEvento[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_eventos.bulkPut(eventos);
-      console.log(`Se han guardado ${eventos.length} eventos.`);
-    } catch (error) {
-      console.error('Error al guardar eventos en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async getAllEventos(): Promise<ICatalogoEvento[]> {
-    if (!this.isBrowser) return [];
-    try {
-      return await this.db.catalogos_eventos.toArray();
-    } catch (error) {
-      console.error('Error al obtener todos los eventos:', error);
-      return [];
-    }
-  }
-  
-  public async bulkPutTipoDocumento(items: ICatalogoTipoDocumento[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_tipos_documento.bulkPut(items);
-      console.log(`Se han guardado ${items.length} tipos de documento.`);
-    } catch (error) {
-      console.error('Error al guardar tipos de documento en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async bulkPutParentesco(items: ICatalogoParentesco[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_parentescos.bulkPut(items);
-      console.log(`Se han guardado ${items.length} parentescos.`);
-    } catch (error) {
-      console.error('Error al guardar parentescos en bulk:', error);
-      throw error;
-    }
-  }
-
-  public async bulkPutGenero(items: ICatalogoGenero[]): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_generos.bulkPut(items);
-      console.log(`Se han guardado ${items.length} géneros.`);
-    } catch (error) {
-      console.error('Error al guardar géneros en bulk:', error);
-      throw error;
-    }
-  }
+  // ---------- UTIL / CLEAR ----------
 
   public async clearAllTables(): Promise<void> {
-    if (!this.isBrowser) return;
+    await this.ensureDbReady();
     try {
-      await this.db.rufe.clear();
-      await this.db.integrantes.clear();
-      await this.db.catalogos_municipios.clear();
-      await this.db.catalogos_departamentos.clear();
-      await this.db.catalogos_tipos_documento.clear();
-      await this.db.catalogos_generos.clear();
-      await this.db.catalogos_parentescos.clear();
-      await this.db.catalogos_zonas.clear();
-      await this.db.catalogos_tipo_ubicacion_bien.clear();
-      await this.db.catalogos_tipo_alojamiento_actual.clear();
-      await this.db.catalogos_forma_tenencia_bien.clear();
-      await this.db.catalogos_estado_bien.clear();
-      await this.db.catalogos_tipo_bien.clear();
-      await this.db.catalogos_pertenencia_etnica.clear();
-      await this.db.catalogos_eventos.clear();
-
+      await this.transaction('rw', this.tables, async () => {
+        await this.rufes.clear();
+        await this.integrantes.clear();
+        await this.catalogos_municipios.clear();
+        await this.catalogos_departamentos.clear();
+        await this.catalogos_tipos_documento.clear();
+        await this.catalogos_generos.clear();
+        await this.catalogos_parentescos.clear();
+        await this.catalogos_zonas.clear();
+        await this.catalogos_tipo_ubicacion_bien.clear();
+        await this.catalogos_tipo_alojamiento_actual.clear();
+        await this.catalogos_forma_tenencia_bien.clear();
+        await this.catalogos_estado_bien.clear();
+        await this.catalogos_tipo_bien.clear();
+        await this.catalogos_pertenencia_etnica.clear();
+        await this.catalogos_eventos.clear();
+        await this.meta.clear();
+      });
       console.log('Todas las tablas de IndexedDB han sido limpiadas.');
     } catch (error) {
       console.error('Error al limpiar todas las tablas:', error);
-    }
-  }
-
-  public async clearCatalogTables(): Promise<void> {
-    if (!this.isBrowser) return;
-    try {
-      await this.db.catalogos_municipios.clear();
-      await this.db.catalogos_departamentos.clear();
-      await this.db.catalogos_tipos_documento.clear();
-      await this.db.catalogos_generos.clear();
-      await this.db.catalogos_parentescos.clear();
-      await this.db.catalogos_zonas.clear();
-      await this.db.catalogos_tipo_ubicacion_bien.clear();
-      await this.db.catalogos_tipo_alojamiento_actual.clear();
-      await this.db.catalogos_forma_tenencia_bien.clear();
-      await this.db.catalogos_estado_bien.clear();
-      await this.db.catalogos_tipo_bien.clear();
-      await this.db.catalogos_pertenencia_etnica.clear();
-      await this.db.catalogos_eventos.clear();
-      console.log('Tablas de catálogos de IndexedDB han sido limpiadas.');
-    } catch (error) {
-      console.error('Error al limpiar tablas de catálogos:', error);
     }
   }
 }

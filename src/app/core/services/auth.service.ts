@@ -9,6 +9,7 @@ import { catchError, tap, takeUntil, switchMap, finalize } from 'rxjs/operators'
 import { ILoginCredentials, IUser, ICatalogApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 import { DatabaseService } from './database.service';
+import { CatalogRepository } from '../repositories/catalog.repository';
 import {
   ICatalogoMunicipio, ICatalogoDepartamento, ICatalogoTipoDocumento,
   ICatalogoGenero, ICatalogoParentesco, ICatalogoZona,
@@ -25,7 +26,7 @@ function decodeJwt(token: string): any | null {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
@@ -52,7 +53,8 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private dbService: DatabaseService,
+    private dbService: DatabaseService, // Still needed for setup/clearing if not moved completely
+    private catalogRepository: CatalogRepository,
     @Inject(forwardRef(() => MenuService)) private menuService: MenuService,
     @Inject(PLATFORM_ID) private platformId: Object,
     private ngZone: NgZone
@@ -121,9 +123,9 @@ export class AuthService {
           console.log('Backend Login Response:', response);
 
           if (!response || !response.token || !response.type ||
-              response.userId === undefined || !response.email ||
-              !response.organizacionNombre || response.organizacionId === undefined ||
-              response.rolId === undefined || !response.rolNombre) {
+            response.userId === undefined || !response.email ||
+            !response.organizacionNombre || response.organizacionId === undefined ||
+            response.rolId === undefined || !response.rolNombre) {
             console.error('Unexpected login response structure or missing data:', response);
             throw new Error('La respuesta del servidor no tiene el formato esperado o faltan datos esenciales.');
           }
@@ -278,7 +280,7 @@ export class AuthService {
 
     // Se asume que DatabaseService tiene un método para contar registros, como `countDepartamentos()`,
     // que devuelve una Promise<number>. Esto es para verificar si los catálogos ya existen.
-    return from(this.dbService.countDepartamentos()).pipe(
+    return from(this.catalogRepository.countDepartamentos()).pipe(
       switchMap(count => {
         if (count > 0) {
           console.log('Los catálogos ya existen en IndexedDB. Omitiendo la descarga.');
@@ -311,18 +313,18 @@ export class AuthService {
         // Use forkJoin to wait for all catalog requests to complete
         return forkJoin(catalogRequests).pipe(
           tap(results => {
-            this.dbService.bulkPutDepartamentos(results.departamentos);
-            this.dbService.bulkPutMunicipios(results.municipios);
-            this.dbService.bulkPutEventos(results.eventos);
-            this.dbService.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
-            this.dbService.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
-            this.dbService.bulkPutFormaTenenciaBien(results.formaTenenciaBien);
-            this.dbService.bulkPutEstadoBien(results.estadoBien);
-            this.dbService.bulkPutTipoBien(results.tipoBien);
-            this.dbService.bulkPutTipoDocumento(results.tipoDocumento);
-            this.dbService.bulkPutParentesco(results.parentesco);
-            this.dbService.bulkPutGenero(results.genero);
-            this.dbService.bulkPutPertenenciaEtnica(results.pertenenciaEtnica);
+            this.catalogRepository.bulkPutDepartamentos(results.departamentos);
+            this.catalogRepository.bulkPutMunicipios(results.municipios);
+            this.catalogRepository.bulkPutEventos(results.eventos);
+            this.catalogRepository.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
+            this.catalogRepository.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
+            this.catalogRepository.bulkPutFormaTenenciaBien(results.formaTenenciaBien);
+            this.catalogRepository.bulkPutEstadoBien(results.estadoBien);
+            this.catalogRepository.bulkPutTipoBien(results.tipoBien);
+            this.catalogRepository.bulkPutTipoDocumento(results.tipoDocumento);
+            this.catalogRepository.bulkPutParentesco(results.parentesco);
+            this.catalogRepository.bulkPutGenero(results.genero);
+            this.catalogRepository.bulkPutPertenenciaEtnica(results.pertenenciaEtnica);
 
             console.log('All catalogs stored in IndexedDB.');
           }),
