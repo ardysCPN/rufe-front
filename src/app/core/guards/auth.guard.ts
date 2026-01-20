@@ -17,7 +17,8 @@
  * - Si no hay usuario ni token, redirige al login.
  */
 
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
@@ -30,14 +31,21 @@ export const AuthGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
   const snackBar = inject(MatSnackBar);
   const networkService = inject(NetworkService);
+  const platformId = inject(PLATFORM_ID);
+  const isBrowser = isPlatformBrowser(platformId);
 
   // Toma el valor actual del usuario y lo mapea a un booleano
   return authService.currentUser.pipe(
     take(1), // Solo toma la primera emisión y luego completa
     switchMap(user => {
       // Permitir acceso si hay sesión offline activa
-      const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
-      const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+      let lastUserEmail: string | null = null;
+      let isOfflineSession = false;
+
+      if (isBrowser) {
+        lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
+        isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+      }
 
       if (!networkService.isOnline || isOfflineSession) {
         if (lastUserEmail && isOfflineSession) {
@@ -75,7 +83,9 @@ export const AuthGuard: CanActivateFn = (route, state) => {
                 duration: 5000,
                 panelClass: ['snackbar-success']
               });
-              localStorage.setItem('isOfflineSession', 'true');
+              if (isBrowser) {
+                localStorage.setItem('isOfflineSession', 'true');
+              }
               return of(true);
             } else {
               snackBar.open('Error al validar la sesión. Por favor, inicia sesión de nuevo.', 'Cerrar', {

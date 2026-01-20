@@ -3,7 +3,7 @@
 import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import  NavbarComponent  from '../navbar/navbar.component';
+import NavbarComponent from '../navbar/navbar.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav'; // Keep MatSidenavModule for potential future use or if other components rely on it.
 
@@ -26,16 +26,8 @@ import { Subject, filter, takeUntil } from 'rxjs';
     <div class="h-screen flex flex-col">
       <app-navbar (toggleSidenav)="toggleSidebar()"></app-navbar>
       <div class="flex flex-1 overflow-hidden">
-        <aside
-          [ngClass]="{
-            'w-64': !isCollapsed,
-            'w-16 hover:w-64': isCollapsed
-          }"
-          class="transition-all duration-300 bg-white dark:bg-gray-900 shadow-lg h-full overflow-y-auto"
-        >
-          <app-sidebar [collapsed]="isCollapsed"></app-sidebar>
-        </aside>
-
+        <app-sidebar [collapsed]="isCollapsed"></app-sidebar>
+        
         <main class="flex-1 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white overflow-y-auto p-6">
           <router-outlet></router-outlet>
         </main>
@@ -57,7 +49,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private menuService: MenuService,
     private networkService: NetworkService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Subscribe to currentUser changes to trigger menu loading when user logs in

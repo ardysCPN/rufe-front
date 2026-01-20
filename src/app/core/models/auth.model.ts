@@ -14,7 +14,7 @@ export interface IUser {
   rolId: number;
   rolNombre: string;
   expiresAt?: number;
-  permissions: string[]; // Uncomment if backend sends permissions here
+  permissions: string[];
 }
 
 /**

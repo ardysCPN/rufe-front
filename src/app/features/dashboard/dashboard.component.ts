@@ -1,12 +1,14 @@
 // src/app/features/dashboard/dashboard.component.ts
 
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router'; // Added Router
 import { MenuService } from '../../core/services/menu.service';
 import { NetworkService } from '../../core/services/network.service';
+import { IMenuItem } from '../../core/models/menu.model'; // Added IMenuItem
 
 @Component({
   selector: 'app-dashboard',
@@ -18,86 +20,175 @@ import { NetworkService } from '../../core/services/network.service';
     MatIconModule
   ],
   template: `
-    <div class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      <!-- RUFE del día -->
-      <mat-card class="rounded-xl shadow-lg hover:shadow-xl transition duration-300">
-        <mat-card-header>
-          <mat-card-title class="text-xl font-semibold text-blue-800 flex items-center gap-2">
-            <mat-icon class="text-blue-600">insert_chart</mat-icon>
-            RUFE Hoy
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-4xl font-bold text-center text-blue-600">128</p>
-          <p class="text-center text-sm text-gray-500">Registros realizados hoy</p>
-        </mat-card-content>
-      </mat-card>
+    <div class="p-8">
+      <!-- Header Section -->
+      <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+            Panel de Control
+          </h1>
+          <p class="text-gray-500 dark:text-gray-400 mt-1">Bienvenido de nuevo, {{ (currentUser?.email) }}</p>
+        </div>
+        
+        <div class="flex gap-3">
+           <!-- Date/Time or generic info could go here -->
+           <span class="px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+             {{ getTodayDate() }}
+           </span>
+        </div>
+      </div>
 
-      <!-- Total RUFE -->
-      <mat-card class="rounded-xl shadow-lg hover:shadow-xl transition duration-300">
-        <mat-card-header>
-          <mat-card-title class="text-xl font-semibold text-green-800 flex items-center gap-2">
-            <mat-icon class="text-green-600">storage</mat-icon>
-            Total RUFE
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-4xl font-bold text-center text-green-600">4,783</p>
-          <p class="text-center text-sm text-gray-500">Acumulado en la plataforma</p>
-        </mat-card-content>
-      </mat-card>
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-8">
+        <!-- RUFE del día: Premium Gradient Card -->
+        <div class="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div class="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+            <mat-icon style="font-size: 150px; width: 150px; height: 150px;">insert_chart</mat-icon>
+          </div>
+          <div class="p-6 relative z-10">
+            <div class="flex items-center gap-3 mb-4 opacity-90">
+              <div class="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                 <mat-icon>today</mat-icon>
+              </div>
+              <span class="font-medium text-lg">Registros Hoy</span>
+            </div>
+            <p class="text-5xl font-extrabold tracking-tight mb-2">128</p>
+            <p class="text-blue-100 text-sm font-medium">
+              <span class="bg-white/20 px-2 py-0.5 rounded text-white text-xs mr-2">+12%</span>
+              vs. ayer
+            </p>
+          </div>
+        </div>
 
-      <!-- RUFE activos -->
-      <mat-card class="rounded-xl shadow-lg hover:shadow-xl transition duration-300">
-        <mat-card-header>
-          <mat-card-title class="text-xl font-semibold text-yellow-800 flex items-center gap-2">
-            <mat-icon class="text-yellow-600">visibility</mat-icon>
-            Activos
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="text-4xl font-bold text-center text-yellow-600">321</p>
-          <p class="text-center text-sm text-gray-500">RUFE en seguimiento activo</p>
-        </mat-card-content>
-      </mat-card>
+        <!-- Total RUFE: Dark Minimalist Card -->
+        <div class="relative group overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+           <div class="p-6">
+             <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-2">
+                   <div class="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
+                      <mat-icon>storage</mat-icon>
+                   </div>
+                   <h3 class="text-lg font-bold text-gray-700 dark:text-gray-200">Total Acumulado</h3>
+                </div>
+                <!-- Sparkline placeholder or chart could go here -->
+             </div>
+             <p class="text-5xl font-extrabold text-gray-800 dark:text-white mb-2">4,783</p>
+             <p class="text-gray-500 dark:text-gray-400 text-sm">Registros totales en plataforma</p>
+           </div>
+           <div class="h-1 w-full bg-green-500"></div>
+        </div>
 
-      <!-- Acciones rápidas -->
-      <div class="col-span-1 md:col-span-2 xl:col-span-3">
-        <mat-card class="rounded-lg shadow-md">
-          <mat-card-header>
-            <mat-card-title class="text-lg font-bold text-gray-800">Acciones Rápidas</mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="flex flex-wrap gap-4 mt-4">
-            <button mat-raised-button color="primary" class="flex items-center gap-2">
-              <mat-icon>assignment</mat-icon> Ver Registros
-            </button>
-            <button mat-raised-button color="accent" class="flex items-center gap-2">
-              <mat-icon>add_circle</mat-icon> Nuevo RUFE
-            </button>
-            <button mat-stroked-button color="warn" class="flex items-center gap-2">
-              <mat-icon>delete</mat-icon> RUFE Inactivos
-            </button>
-          </mat-card-content>
-        </mat-card>
+        <!-- RUFE Activos: Accent Card -->
+        <div class="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+           <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-1/4 translate-y-1/4">
+             <mat-icon style="font-size: 150px; width: 150px; height: 150px;">visibility</mat-icon>
+           </div>
+           <div class="p-6 relative z-10">
+             <div class="flex items-center gap-3 mb-4 opacity-90">
+               <div class="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <mat-icon>remove_red_eye</mat-icon>
+               </div>
+               <span class="font-medium text-lg">Seguimiento Activo</span>
+             </div>
+             <p class="text-5xl font-extrabold tracking-tight mb-2">321</p>
+             <p class="text-purple-100 text-sm">Casos que requieren atención</p>
+           </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Grid -->
+      <div>
+        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+           <mat-icon class="text-blue-600">flash_on</mat-icon> Acciones Rápidas
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+           <!-- Nuevo RUFE (Dynamic Check) -->
+           <button 
+              *ngIf="hasRoutePermission('/rufe/new')" 
+              (click)="navigateTo('/rufe/new')"
+              class="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow border-2 border-transparent hover:border-blue-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
+              <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                 <mat-icon>add</mat-icon>
+              </div>
+              <span class="font-semibold text-gray-700 dark:text-gray-200">Nuevo RUFE</span>
+           </button>
+
+           <!-- Ver Registros -->
+           <button 
+              (click)="navigateTo('/rufe/list')"
+              class="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow border-2 border-transparent hover:border-green-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
+              <div class="w-12 h-12 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                 <mat-icon>list</mat-icon>
+              </div>
+              <span class="font-semibold text-gray-700 dark:text-gray-200">Ver Registros</span>
+           </button>
+
+           <!-- Sync Manual -->
+           <button class="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow border-2 border-transparent hover:border-indigo-500 hover:shadow-lg transition-all group cursor-pointer">
+              <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                 <mat-icon>sync</mat-icon>
+              </div>
+              <span class="font-semibold text-gray-700 dark:text-gray-200">Sync Manual</span>
+           </button>
+        </div>
       </div>
     </div>
   `
 })
 export class DashboardComponent implements OnInit {
-  currentUser: any; // Suponiendo que tienes un objeto de usuario actual
-  
-  constructor(private menuService: MenuService, private networkService: NetworkService) {}
+  currentUser: any;
+  isBrowser: boolean;
+  menuItems: IMenuItem[] = [];
+
+  constructor(
+    private menuService: MenuService,
+    private networkService: NetworkService,
+    private router: Router,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
-    const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+    let isOfflineSession = false;
+    if (this.isBrowser) {
+      isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+    }
+
+    // Subscribe to menu updates for dynamic actions
+    this.menuService.menuItems$.subscribe(items => {
+      this.menuItems = items;
+    });
+
     if (isOfflineSession || !this.networkService.isOnline) {
       // Cargar datos y menú desde IndexedDB
       this.menuService.getDynamicMenu(null).subscribe();
-      // Aquí puedes cargar otros datos desde IndexedDB
     } else {
       // Cargar datos y menú desde el backend normalmente
       this.menuService.getDynamicMenu(this.currentUser).subscribe();
-      // Aquí puedes cargar otros datos desde el backend
     }
+  }
+
+  getTodayDate(): string {
+    return new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  hasRoutePermission(route: string): boolean {
+    const find = (items: IMenuItem[]): boolean => {
+      if (!items) return false;
+      for (const item of items) {
+        if (item.ruta === route && item.ruta !== '') return true;
+        if (item.subItems && find(item.subItems)) return true;
+      }
+      return false;
+    }
+    return find(this.menuItems);
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

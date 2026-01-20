@@ -1,25 +1,14 @@
-// src/app/features/admin/organizations/organization-management/organization-management.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { PermissionService } from '../../../../core/services/permission.service';
 
-// Import reusable components (Tailwind-only versions)
-import { InputComponent } from '../../../../shared/components/input/input.component';
-import { ButtonComponent } from '../../../../shared/components/button/button.component';
-import { SelectComponent } from '../../../../shared/components/select/select.component';
-import { TableComponent, TableColumn } from '../../../../shared/components/table/table.component';
-import { ICatalogoItemResponse } from '../../../../models/catalogs.model';
-
-// Example data interfaces (you'll replace with your actual API models)
 interface Organization {
   id: number;
-  name: string;
-  email: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
+  nombreOrganizacion: string;
+  activa: boolean;
 }
 
 @Component({
@@ -27,255 +16,97 @@ interface Organization {
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    InputComponent,
-    ButtonComponent,
-    SelectComponent,
-    TableComponent
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule
   ],
   template: `
-    <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-      <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        Gestión de Organizaciones
-      </h2>
-
-      <!-- Form for Create/Edit -->
-      <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()" class="mb-8">
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          {{ isEditMode ? 'Editar Organización' : 'Crear Nueva Organización' }}
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-6">
-          <app-input
-            label="Nombre de Organización"
-            id="org-name"
-            name="org-name"
-            type="text"
-            placeholder="Nombre de la empresa"
-            [required]="true"
-            formControlName="name"
-          ></app-input>
-
-          <app-input
-            label="Correo Electrónico"
-            id="org-email"
-            name="org-email"
-            type="email"
-            placeholder="contacto@empresa.com"
-            [required]="true"
-            formControlName="email"
-          ></app-input>
-
-          <app-input
-            label="Dirección"
-            id="org-address"
-            name="org-address"
-            type="text"
-            placeholder="Calle Principal 123"
-            formControlName="address"
-          ></app-input>
-
-          <app-input
-            label="Ciudad"
-            id="org-city"
-            name="org-city"
-            type="text"
-            placeholder="Ciudad"
-            formControlName="city"
-          ></app-input>
-
-          <app-input
-            label="Estado/Provincia"
-            id="org-state"
-            name="org-state"
-            type="text"
-            placeholder="Estado"
-            formControlName="state"
-          ></app-input>
-
-          <app-input
-            label="Código Postal"
-            id="org-postal-code"
-            name="org-postal-code"
-            type="text"
-            placeholder="00000"
-            formControlName="postalCode"
-          ></app-input>
-
-          <app-select
-            label="Tipo de Organización"
-            id="org-type"
-            name="org-type"
-            [options]="organizationTypes"
-            [required]="true"
-            [loadingOptions]="selectLoading"
-            formControlName="organizationTypeId"
-          ></app-select>
+    <div class="p-8 animate-fade-in-up">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+           <h1 class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+             Organizaciones
+           </h1>
+           <p class="text-gray-500 dark:text-gray-400 mt-1">Gestión multitenant de clientes</p>
         </div>
+        
+        <button 
+          mat-flat-button 
+          class="bg-green-600 text-white rounded-lg px-6 py-2 shadow-lg shadow-green-500/20"
+          *ngIf="canCreate"
+        >
+          <mat-icon class="mr-2">domain_add</mat-icon> Nueva Organización
+        </button>
+      </div>
 
-        <div class="flex items-center justify-end space-x-4 mt-8">
-          <app-button type="button" variant="basic" (click)="onCancelEdit()">
-            {{ isEditMode ? 'Cancelar Edición' : 'Limpiar Formulario' }}
-          </app-button>
-          <app-button type="submit" variant="primary" [loading]="loading" [disabled]="organizationForm.invalid">
-            {{ isEditMode ? 'Actualizar Organización' : 'Guardar Organización' }}
-          </app-button>
+      <div class="bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              <tr *ngFor="let org of organizations" class="group hover:bg-green-50/50 dark:hover:bg-gray-800/50 transition-colors duration-200">
+                <td class="p-4 font-bold text-gray-800 dark:text-white">
+                  {{ org.nombreOrganizacion }}
+                </td>
+                <td class="p-4">
+                   <span 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [class.bg-green-100]="org.activa"
+                    [class.text-green-800]="org.activa"
+                    [class.bg-gray-100]="!org.activa"
+                    [class.text-gray-800]="!org.activa"
+                  >
+                     {{ org.activa ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="p-4 text-right">
+                  <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </form>
-
-      <!-- Divider -->
-      <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-      <!-- Section for Table -->
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        Listado de Organizaciones
-      </h3>
-      <app-table
-        [columns]="organizationTableColumns"
-        [data]="organizations"
-        [selectable]="true"
-        [selectedRow]="selectedOrganization"
-        [loading]="tableLoading"
-        (rowSelected)="onOrganizationSelected($event)"
-        [showActions]="true"
-      >
-        <!-- Custom actions slot for the table -->
-        <ng-template #tableActions let-row>
-          <div class="flex justify-center space-x-2">
-            <app-button type="button" variant="secondary" customClasses="px-2 py-1 text-xs" (click)="onEditOrganization(row)">
-              Editar
-            </app-button>
-            <app-button type="button" variant="danger" customClasses="px-2 py-1 text-xs" (click)="onDeleteOrganization(row)">
-              Eliminar
-            </app-button>
-          </div>
-        </ng-template>
-      </app-table>
+      </div>
     </div>
-  `,
-  styles: [`
-    /* Any specific styles for this component if needed */
-  `]
+  `
 })
 export class OrganizationManagementComponent implements OnInit {
-  organizationForm: FormGroup;
-  loading: boolean = false;
-  tableLoading: boolean = false;
-  selectLoading: boolean = false; // NEW: Loading state for the select
-  isEditMode: boolean = false;
-  selectedOrganization: Organization | null = null;
+  organizations: Organization[] = [];
+  canCreate = false;
+  canEdit = false;
+  canDelete = false;
 
-  organizations: Organization[] = []; // Initialize as empty array to simulate API fetch
-
-  organizationTableColumns: TableColumn[] = [
-    { key: 'id', label: 'ID', width: 'w-16', align: 'center' },
-    { key: 'name', label: 'Nombre', width: 'w-1/4' },
-    { key: 'email', label: 'Email', width: 'w-1/4' },
-    { key: 'city', label: 'Ciudad' },
-    { key: 'state', label: 'Estado' },
-  ];
-
-  organizationTypes: ICatalogoItemResponse[] = []; // Initialize as empty
-  private mockOrganizationTypes: ICatalogoItemResponse[] = [
-    { id: 1, nombre: 'Corporación' },
-    { id: 2, nombre: 'ONG' },
-    { id: 3, nombre: 'Startup' },
-  ];
-
-  constructor(private fb: FormBuilder) {
-    this.organizationForm = this.fb.group({
-      id: [null],
-      name: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      address: [''],
-      city: [''],
-      state: [''],
-      postalCode: [''],
-      organizationTypeId: ['', Validators.required]
-    });
-  }
+  constructor(private permissionService: PermissionService) { }
 
   ngOnInit(): void {
-    // Load data when the component initializes
-    this.loadOrganizations();
-    this.loadOrganizationTypes();
+    this.checkPermissions();
+    this.loadMockData();
   }
 
-  loadOrganizations(): void {
-    this.tableLoading = true;
-    console.log('Fetching organizations from microservice...');
-    setTimeout(() => {
-      this.organizations = [
-        { id: 1, name: 'GlobalCorp', email: 'info@global.com', address: '123 Main St', city: 'Anytown', state: 'CA', postalCode: '90210' },
-        { id: 2, name: 'Tech Solutions', email: 'contact@tech.com', address: '456 Tech Ave', city: 'Techville', state: 'NY', postalCode: '10001' },
-        { id: 3, name: 'Innovate Co.', email: 'hello@innovate.com', address: '789 Innovation Dr', city: 'Newburg', state: 'TX', postalCode: '73301' },
-      ];
-      this.tableLoading = false;
-      console.log('Organizations loaded successfully.');
-    }, 2000); // Simulate 2-second API delay
+  checkPermissions() {
+    this.canCreate = this.permissionService.hasPermission('organizaciones:crear');
+    this.canEdit = this.permissionService.hasPermission('organizaciones:actualizar');
+    this.canDelete = this.permissionService.hasPermission('organizaciones:eliminar');
   }
 
-  loadOrganizationTypes(): void {
-    this.selectLoading = true;
-    console.log('Fetching organization types from microservice...');
-    setTimeout(() => {
-      this.organizationTypes = this.mockOrganizationTypes;
-      this.selectLoading = false;
-      console.log('Organization types loaded successfully.');
-    }, 1000); // Simulate 1-second API delay
-  }
-
-  onSubmit(): void {
-    if (this.organizationForm.valid) {
-      this.loading = true;
-      const formData = this.organizationForm.value;
-      console.log('Formulario enviado:', formData);
-      setTimeout(() => {
-        this.loading = false;
-        if (this.isEditMode) {
-          const index = this.organizations.findIndex(org => org.id === formData.id);
-          if (index !== -1) {
-            this.organizations[index] = { ...formData };
-          }
-        } else {
-          const newId = Math.max(...this.organizations.map(o => o.id)) + 1;
-          const newOrg = { ...formData, id: newId };
-          this.organizations.push(newOrg);
-        }
-        this.onCancelEdit();
-      }, 1500);
-    } else {
-      this.organizationForm.markAllAsTouched();
-      console.warn('Formulario inválido. Por favor, revisa los campos.');
-    }
-  }
-
-  onOrganizationSelected(organization: Organization | null): void {
-    this.selectedOrganization = organization;
-    if (organization) {
-      this.onEditOrganization(organization);
-    } else {
-      this.onCancelEdit();
-    }
-  }
-
-  onEditOrganization(organization: Organization): void {
-    this.isEditMode = true;
-    this.selectedOrganization = organization;
-    this.organizationForm.patchValue(organization);
-    this.organizationForm.get('organizationTypeId')?.setValue(this.organizationTypes[0].id);
-  }
-
-  onDeleteOrganization(organization: Organization): void {
-    if (confirm(`¿Estás seguro de que quieres eliminar la organización "${organization.name}"?`)) {
-      this.organizations = this.organizations.filter(org => org.id !== organization.id);
-      this.onCancelEdit();
-    }
-  }
-
-  onCancelEdit(): void {
-    this.isEditMode = false;
-    this.selectedOrganization = null;
-    this.organizationForm.reset();
-    this.organizationForm.get('organizationTypeId')?.setValue('');
+  loadMockData() {
+    this.organizations = [
+      { id: 1, nombreOrganizacion: 'GlobalCorp', activa: true },
+      { id: 2, nombreOrganizacion: 'Cliente Demo', activa: true },
+      { id: 3, nombreOrganizacion: 'Empresa Inactiva', activa: false },
+    ];
   }
 }
