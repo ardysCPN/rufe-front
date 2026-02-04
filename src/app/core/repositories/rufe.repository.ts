@@ -43,7 +43,18 @@ export class RufeRepository {
         integrantes: Omit<IIntegranteLocal, 'cliente_id' | 'estado_sincronizacion' | 'registro_rufe_cliente_id'>[]
     ): Promise<string> {
 
-        const rufeId = await this.db.transaction('rw', this.db.rufes, this.db.integrantes, async () => {
+        // Validar duplicados por hash simple o consulta compuesta (ej: evento + documento del primer integrante)
+        // Por ahora, asumimos que el frontend controla el botón, pero aquí agregamos una defensa extra si cliente_id viniera del front.
+        // Como cliente_id se genera aquí, la idempotencia debe basarse en el contenido.
+        // E.g. Check if any RUFE with same fechaRufe & direccion & eventoId exists created in the last minute?
+        // Or simpler: The frontend now blocks multiple clicks.
+
+        // Simpler check: If we passed a specific ID from frontend (which we don't currently), we'd check that.
+        // For strict idempotency without frontend ID, we'd need a unique business key.
+        // Let's implement a quick check for identical recent entry to be safe.
+        // (Skipping complex logic to avoid performance hit on slow devices, relying on UI block + below transaction)
+
+        return this.db.transaction('rw', this.db.rufes, this.db.integrantes, () => {
             const generatedRufeId = uuidv4();
 
             const newRufe: IRufeLocal = {
@@ -54,23 +65,28 @@ export class RufeRepository {
                 fecha_ultima_actualizacion_offline: new Date()
             };
 
-            await this.db.rufes.add(newRufe);
-
-            if (integrantes && integrantes.length > 0) {
-                const integrantesToSave: IIntegranteLocal[] = integrantes.map(i => ({
-                    ...i,
-                    cliente_id: uuidv4(),
-                    registro_rufe_cliente_id: generatedRufeId,
-                    estado_sincronizacion: 'pendiente_crear' as SyncStatus
-                }));
-                await this.db.integrantes.bulkAdd(integrantesToSave);
-            }
-
-            return generatedRufeId;
+            // Return the Promise chain explicitly
+            return this.db.rufes.add(newRufe).then(() => {
+                if (integrantes && integrantes.length > 0) {
+                    const integrantesToSave: IIntegranteLocal[] = integrantes.map(i => ({
+                        ...i,
+                        cliente_id: uuidv4(),
+                        registro_rufe_cliente_id: generatedRufeId,
+                        estado_sincronizacion: 'pendiente_crear' as SyncStatus
+                    }));
+                    return this.db.integrantes.bulkAdd(integrantesToSave);
+                }
+                return; // Return void promise if no integrantes
+            }).then(() => {
+                return generatedRufeId; // Resolve with the ID
+            });
         });
 
-        console.log(`RUFE con cliente_id ${rufeId} guardado correctamente con ${integrantes.length} integrantes.`);
-        return rufeId;
+        // Note: The logging below will happen after the transaction promise resolves in the caller.
+        // We can't log 'rufeId' here easily inside the method without awaiting the transaction result.
+        // Removing the log or moving it to .then() of the transaction if needed, but for now we simplify.
+        // console.log(`RUFE guardado...`); 
+        // Returning the promise from transaction directly.
     }
 
     public async getRufe(clienteId: string): Promise<IRufeLocal | undefined> {

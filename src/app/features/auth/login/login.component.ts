@@ -78,23 +78,7 @@ import { NetworkService } from '../../../core/services/network.service';
             </div>
           </div>
 
-          <!-- Organization Field (New) -->
-          <div>
-            <label for="organizacion" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-200">Organización</label>
-            <div class="mt-2">
-              <input
-                id="organizacion"
-                type="text"
-                formControlName="organizacion"
-                placeholder="MiEmpresaSAAS"
-                required
-                class="block w-full rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white outline outline-1 outline-gray-300 dark:outline-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:outline-indigo-600"
-              />
-              <p *ngIf="loginForm.get('organizacion')?.invalid && loginForm.get('organizacion')?.touched" class="mt-2 text-sm text-red-600">
-                La organización es obligatoria.
-              </p>
-            </div>
-          </div>
+
 
           <!-- Submit Button -->
           <div>
@@ -135,7 +119,6 @@ export class LoginComponent {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
-      organizacion: ['', Validators.required] // Added organizacion field
     });
   }
 
@@ -149,7 +132,7 @@ export class LoginComponent {
       return;
     }
 
-    const { email, password, organizacion } = this.loginForm.value as ILoginCredentials;
+    const { email, password } = this.loginForm.value as ILoginCredentials;
 
     if (!this.networkService.isOnline) {
       const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
@@ -171,7 +154,7 @@ export class LoginComponent {
 
     // Solo intenta login online si hay conexión
     this.loading = true;
-    this.authService.login({ email, password, organizacion }).subscribe({
+    this.authService.login({ email, password }).subscribe({
       next: (user) => {
         localStorage.setItem('lastLoggedUserEmail', email);
         this.snackBar.open(`¡Bienvenido, ${user.nombre}!`, 'Cerrar', { duration: 3000 });
@@ -204,12 +187,12 @@ export class LoginComponent {
           // Fallback para errores no controlados
           console.error('Login error:', err);
           this.snackBar.open(errorMessage, 'Cerrar', {
-          duration: 5000,
-          panelClass: ['snackbar-error']
-        });
+            duration: 5000,
+            panelClass: ['snackbar-error']
+          });
         }
 
-        
+
       },
       complete: () => {
         this.loading = false;

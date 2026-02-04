@@ -105,7 +105,13 @@ export default class NavbarComponent implements OnInit {
   }
 
   toggleMenu(): void {
+    // Force toggle and check change detection
     this.menuOpen = !this.menuOpen;
+    console.log('Toggle Menu:', this.menuOpen);
+    // En caso de que se ejecute fuera de zona (aunque (click) es zona Angular)
+    if (this.menuOpen) {
+      // Auto-close on outside click implementation could be added here if needed
+    }
   }
 
   logout(): void {

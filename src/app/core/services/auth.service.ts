@@ -113,8 +113,7 @@ export class AuthService {
   login(credentials: ILoginCredentials): Observable<any> {
     const loginPayload = {
       email: credentials.email,
-      password: credentials.password,
-      organizacion: credentials.organizacion
+      password: credentials.password
     };
 
     return this.http.post<any>(`${environment.apiUrl}/auth/login`, loginPayload)
@@ -122,26 +121,30 @@ export class AuthService {
         tap(response => {
           console.log('Backend Login Response:', response);
 
-          if (!response || !response.token || !response.type ||
-            response.userId === undefined || !response.email ||
-            !response.organizacionNombre || response.organizacionId === undefined ||
-            response.rolId === undefined || !response.rolNombre) {
+          // Validate new structure (nested user)
+          if (!response || !response.token || !response.type || !response.user ||
+            response.user.id === undefined ||
+            response.user.rolId === undefined ||
+            !response.user.rol) {
             console.error('Unexpected login response structure or missing data:', response);
             throw new Error('La respuesta del servidor no tiene el formato esperado o faltan datos esenciales.');
           }
 
           const decodedToken = decodeJwt(response.token);
           const expiresAt = decodedToken?.exp;
+          // Try to get email from token if not in response body, or use placeholder
+          const email = response.user.email || decodedToken?.sub || 'usuario@sistema.com';
 
           const user: IUser = {
             token: response.token,
             type: response.type,
-            userId: response.userId,
-            email: response.email,
-            organizacionId: response.organizacionId,
-            organizacionNombre: response.organizacionNombre,
-            rolId: response.rolId,
-            rolNombre: response.rolNombre,
+            userId: response.user.id,
+            email: email,
+            organizacionId: response.user.organizacionId,
+            // Fallback since backend stopped sending organization name
+            organizacionNombre: response.user.organizacionNombre || 'Organización',
+            rolId: response.user.rolId,
+            rolNombre: response.user.rol, // Mapped from 'rol'
             expiresAt: expiresAt,
             permissions: response.permissions || []
           };
@@ -252,15 +255,22 @@ export class AuthService {
 
   private listenForUserActivity(): void {
     this.ngZone.runOutsideAngular(() => {
-      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+      // Use 'true' for capture phase to ensure we catch events even if propagation is stopped
+      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
       events.forEach(event => {
-        window.addEventListener(event, () => this.userActivity$.next(), { passive: true });
+        // Attach to document.body or window with capture to ensure we get it
+        window.addEventListener(event, () => this.userActivity$.next(), { passive: true, capture: true });
       });
     });
 
     this.userActivity$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        // Debounce to avoid excessive resetting
+        // debounceTime(500), // import debounceTime if needed, or simple throttle
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
+        // Reset timer, but protect against flooding
         this.resetInactivityTimer();
       });
   }
@@ -299,6 +309,7 @@ export class AuthService {
           departamentos: this.http.get<ICatalogoDepartamento[]>(`${environment.apiUrl}/api/catalogos/departamentos`),
           municipios: this.http.get<ICatalogoMunicipio[]>(`${environment.apiUrl}/api/catalogos/municipios`),
           eventos: this.http.get<ICatalogoEvento[]>(`${environment.apiUrl}/api/catalogos/eventos`),
+          eventosReales: this.http.get<any[]>(`${environment.apiUrl}/api/eventos`), // NUEVO: Eventos reales
           tipoUbicacionBien: this.http.get<ICatalogoTipoUbicacionBien[]>(`${environment.apiUrl}/api/catalogos/tipo-ubicacion-bien`),
           tipoAlojamientoActual: this.http.get<ICatalogoTipoAlojamientoActual[]>(`${environment.apiUrl}/api/catalogos/tipo-alojamiento-actual`),
           formaTenenciaBien: this.http.get<ICatalogoFormaTenenciaBien[]>(`${environment.apiUrl}/api/catalogos/forma-tenencia-bien`),
@@ -316,6 +327,10 @@ export class AuthService {
             this.catalogRepository.bulkPutDepartamentos(results.departamentos);
             this.catalogRepository.bulkPutMunicipios(results.municipios);
             this.catalogRepository.bulkPutEventos(results.eventos);
+            // Guardar eventos reales en IndexedDB
+            this.dbService.eventos_reales.bulkPut(results.eventosReales).then(() => {
+              console.log(`Se han guardado ${results.eventosReales.length} eventos reales.`);
+            });
             this.catalogRepository.bulkPutTipoUbicacionBien(results.tipoUbicacionBien);
             this.catalogRepository.bulkPutTipoAlojamientoActual(results.tipoAlojamientoActual);
             this.catalogRepository.bulkPutFormaTenenciaBien(results.formaTenenciaBien);

@@ -1,308 +1,290 @@
 <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-      <h2 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-        Registro Unifamiliar de Emergencias (RUFE)
-      </h2>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">
-        Código: FR-1703-SMD-69 · Versión: 01 · F.A: 11/04/2025
-      </p>
+  <h2 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+    Registro Unifamiliar de Emergencias (RUFE)
+  </h2>
+  <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">
+    Código: FR-1703-SMD-69 · Versión: 01 · F.A: 11/04/2025
+  </p>
 
-      <form [formGroup]="rufeForm" (ngSubmit)="onSubmit()">
+  <form [formGroup]="rufeForm" (ngSubmit)="onSubmit()">
 
-        <!-- Sección: Datos Generales -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Datos Generales
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-            <app-select
-              label="Departamento"
-              id="departamento"
-              name="departamento"
-              [options]="departments"
-              formControlName="departamento"
-              [required]="true">
-            </app-select>
-            <app-select
-              label="Municipio"
-              id="municipio"
-              name="municipio"
-              [options]="filteredMunicipalities"
-              formControlName="municipio"
-              [required]="true">
-            </app-select>
-            <app-select
-              label="Evento"
-              id="evento"
-              name="evento"
-              [options]="events"
-              formControlName="evento"
-              [required]="true">
-            </app-select>
-            <app-input
-              label="Fecha Evento"
-              id="fecha-evento"
-              name="fecha-evento"
-              type="date"
-              [required]="true"
-              formControlName="fechaEvento">
-            </app-input>
-            <app-input
-              label="Fecha RUFE"
-              id="fecha-rufe"
-              name="fecha-rufe"
-              type="date"
-              [required]="true"
-              formControlName="fechaRufe">
-            </app-input>
-          </div>
-        </div>
+    <!-- Sección: Selección de Evento (PRIMERO) -->
+    <div class="mb-6 bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <span class="text-2xl">📋</span> Evento Real
+      </h3>
+      <div class="grid grid-cols-1 gap-6">
+        <app-select label="Seleccione el Evento Real" id="evento" name="evento" [options]="eventsForSelect"
+          formControlName="evento" [required]="true">
+        </app-select>
 
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Sección: Ubicación del Bien -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Ubicación del Bien
-          </h3>
-          <div class="flex items-center space-x-6 mb-4">
-            <div class="flex items-center">
-              <input type="radio" id="ubicacion-urbano" value="urbano" formControlName="ubicacionTipo" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-600 dark:bg-gray-700 dark:border-gray-600" />
-              <label for="ubicacion-urbano" class="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Urbano</label>
-            </div>
-            <div class="flex items-center">
-              <input type="radio" id="ubicacion-rural" value="rural" formControlName="ubicacionTipo" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-600 dark:bg-gray-700 dark:border-gray-600" />
-              <label for="ubicacion-rural" class="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Rural</label>
+        <!-- Información del evento seleccionado -->
+        <div *ngIf="selectedEvent"
+          class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-blue-300 dark:border-blue-700">
+          <h4 class="font-bold text-lg mb-2 text-blue-700 dark:text-blue-300">{{ selectedEvent.nombreEvento }}</h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div><span class="font-semibold">Tipo:</span> {{ selectedEvent.tipoEvento || 'No especificado' }}</div>
+            <div><span class="font-semibold">Fecha:</span> {{ selectedEvent.fechaEvento }}</div>
+            <div><span class="font-semibold">Departamento:</span> {{ selectedEvent.departamento }}</div>
+            <div><span class="font-semibold">Municipio:</span> {{ selectedEvent.municipio }}</div>
+            <div class="col-span-2" *ngIf="selectedEvent.descripcion">
+              <span class="font-semibold">Descripción:</span> {{ selectedEvent.descripcion }}
             </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-            <app-input
-              *ngIf="rufeForm.get('ubicacionTipo')?.value === 'rural'"
-              label="Corregimiento"
-              id="corregimiento"
-              name="corregimiento"
-              formControlName="corregimiento">
-            </app-input>
-            <app-input
-              *ngIf="rufeForm.get('ubicacionTipo')?.value === 'rural'"
-              label="Vereda / Sector / Barrio"
-              id="vereda"
-              name="vereda"
-              formControlName="veredaSectorBarrio">
-            </app-input>
-            <app-input
-              *ngIf="rufeForm.get('ubicacionTipo')?.value === 'urbano'"
-              label="Vereda / Sector / Barrio"
-              id="barrio"
-              name="barrio"
-              formControlName="veredaSectorBarrio">
-            </app-input>
-            <app-input
-              label="Dirección"
-              id="direccion"
-              name="direccion"
-              formControlName="direccion"
-              [required]="true">
-            </app-input>
-          </div>
         </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Sección: Más Campos -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Características del Bien
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-            <app-select
-              label="Forma de Tenencia"
-              id="forma-tenencia"
-              name="forma-tenencia"
-              [options]="tenencia"
-              formControlName="formaTenencia"
-              [required]="true">
-            </app-select>
-            <app-select
-              label="Estado del Bien"
-              id="estado-bien"
-              name="estado-bien"
-              [options]="estadoBien"
-              formControlName="estadoBien"
-              [required]="true">
-            </app-select>
-            <app-select
-              label="Tipo de Bien"
-              id="tipo-bien"
-              name="tipo-bien"
-              [options]="tipoBien"
-              formControlName="tipoBien"
-              [required]="true">
-            </app-select>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Section: Alojamiento Actual -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Alojamiento Actual
-          </h3>
-          <app-select
-            label="Alojamiento Actual"
-            id="alojamiento-actual"
-            name="alojamiento-actual"
-            [options]="alojamiento"
-            formControlName="alojamientoActual"
-            [required]="true">
-          </app-select>
-        </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Section: Personas (Dynamic Table) -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Personas
-          </h3>
-          <div formArrayName="personas" class="space-y-6">
-            <div *ngFor="let personaGroup of personas.controls; let i = index" [formGroupName]="i" class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
-              <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Persona #{{ i + 1 }}</h4>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-                <app-input label="Nombre(s)" id="nombre-{{i}}" name="nombre-{{i}}" formControlName="nombres" [required]="true"></app-input>
-                <app-input label="Apellido(s)" id="apellido-{{i}}" name="apellido-{{i}}" formControlName="apellidos" [required]="true"></app-input>
-
-                <app-select
-                  label="Tipo documento"
-                  id="tipo-doc-{{i}}"
-                  name="tipo-doc-{{i}}"
-                  [options]="documentTypes"
-                  formControlName="tipoDocumento"
-                  [required]="true">
-                </app-select>
-
-                <app-input
-                  label="Número documento"
-                  id="num-doc-{{i}}"
-                  name="num-doc-{{i}}"
-                  type="number"
-                  placeholder="Sin puntos ni comas"
-                  formControlName="numeroDocumento"
-                  [required]="true">
-                  <ng-template #customError>
-                    <p *ngIf="personaGroup.get('numeroDocumento')?.errors?.['uniqueDocument']" class="mt-2 text-sm text-red-600">
-                      Este número de documento ya existe.
-                    </p>
-                  </ng-template>
-                </app-input>
-
-                <app-input label="Fecha de nacimiento" id="fecha-nac-{{i}}" name="fecha-nac-{{i}}" type="date" formControlName="fechaNacimiento"></app-input>
-
-                <app-select
-                  label="Género"
-                  id="genero-{{i}}"
-                  name="genero-{{i}}"
-                  [options]="genders"
-                  formControlName="genero"
-                  [required]="true">
-                </app-select>
-
-                <app-select
-                  label="Parentesco"
-                  id="parentesco-{{i}}"
-                  name="parentesco-{{i}}"
-                  [options]="relationships"
-                  formControlName="parentesco"
-                  [required]="true">
-                </app-select>
-
-                <app-select
-                  label="Etnia"
-                  id="etnia-{{i}}"
-                  name="etnia-{{i}}"
-                  [options]="ethnicities"
-                  formControlName="etnia">
-                </app-select>
-
-                <app-input label="Teléfono" id="tel-{{i}}" name="tel-{{i}}" type="tel" formControlName="telefono"></app-input>
-              </div>
-
-              <div class="absolute top-2 right-2">
-                <app-button *ngIf="personas.length > 1" type="button" variant="danger" customClasses="px-2 py-1 text-xs" (click)="removePersona(i)">
-                  Eliminar
-                </app-button>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4 flex justify-end">
-            <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addPersona()">
-              Agregar Persona
-            </app-button>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Section: Agropecuario (Dynamic Table) -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Agropecuario
-          </h3>
-          <div formArrayName="agropecuario" class="space-y-6">
-            <div *ngFor="let agroGroup of agropecuario.controls; let i = index" [formGroupName]="i" class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
-              <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Ítem #{{ i + 1 }}</h4>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-                <app-input label="Tipo de cultivo" id="cultivo-{{i}}" name="cultivo-{{i}}" formControlName="tipoCultivo"></app-input>
-                <app-select label="Unidad de medida" id="medida-{{i}}" name="medida-{{i}}" [options]="measureUnits" formControlName="unidadMedida"></app-select>
-                <app-input label="Área" id="area-{{i}}" name="area-{{i}}" type="number" formControlName="area"></app-input>
-                <app-input label="Cantidad" id="cantidad-{{i}}" name="cantidad-{{i}}" type="number" formControlName="cantidad"></app-input>
-              </div>
-              <div class="absolute top-2 right-2">
-                <app-button *ngIf="agropecuario.length > 1" type="button" variant="danger" customClasses="px-2 py-1 text-xs" (click)="removeAgropecuario(i)">
-                  Eliminar
-                </app-button>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4 flex justify-end">
-            <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addAgropecuario()">
-              Agregar Ítem
-            </app-button>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Section: Sector Pecuario -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Sector Pecuario
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-            <app-input label="Especie" id="especie" name="especie" formControlName="especie"></app-input>
-            <app-input label="Cantidad" id="cantidad-pecuaria" name="cantidad-pecuaria" type="number" formControlName="cantidadPecuaria"></app-input>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
-
-        <!-- Section: Observaciones -->
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Observaciones
-          </h3>
-          <textarea formControlName="observaciones" rows="4" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:focus:ring-indigo-500"></textarea>
-        </div>
-
-        <!-- Section: Form Actions -->
-        <div class="flex items-center justify-end space-x-4 mt-8">
-          <app-button type="button" variant="basic" (click)="onClear()">
-            Limpiar
-          </app-button>
-          <app-button type="submit" variant="primary">
-            Guardar
-          </app-button>
-        </div>
-      </form>
+      </div>
     </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Sección: Datos Generales -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Datos Generales
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+        <app-select label="Departamento" id="departamento" name="departamento" [options]="departments"
+          formControlName="departamento" [required]="true">
+        </app-select>
+        <app-select label="Municipio" id="municipio" name="municipio" [options]="filteredMunicipalities"
+          formControlName="municipio" [required]="true">
+        </app-select>
+        <app-select label="Tipo de Evento" id="tipo-evento" name="tipoEvent" [options]="tiposEvento"
+          formControlName="tipoEvento" [required]="true">
+        </app-select>
+        <app-input label="Fecha Evento" id="fecha-evento" name="fecha-evento" type="date" [required]="true"
+          formControlName="fechaEvento">
+        </app-input>
+        <app-input label="Fecha RUFE" id="fecha-rufe" name="fecha-rufe" type="date" [required]="true"
+          formControlName="fechaRufe">
+        </app-input>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Sección: Ubicación del Bien -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Ubicación del Bien
+      </h3>
+      <div class="flex items-center space-x-6 mb-4">
+        <div class="flex items-center">
+          <input type="radio" id="ubicacion-urbano" value="urbano" formControlName="ubicacionTipo"
+            class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-600 dark:bg-gray-700 dark:border-gray-600" />
+          <label for="ubicacion-urbano"
+            class="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Urbano</label>
+        </div>
+        <div class="flex items-center">
+          <input type="radio" id="ubicacion-rural" value="rural" formControlName="ubicacionTipo"
+            class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-600 dark:bg-gray-700 dark:border-gray-600" />
+          <label for="ubicacion-rural"
+            class="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Rural</label>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+        <app-input *ngIf="rufeForm.get('ubicacionTipo')?.value === 'rural'" label="Corregimiento" id="corregimiento"
+          name="corregimiento" formControlName="corregimiento">
+        </app-input>
+        <app-input *ngIf="rufeForm.get('ubicacionTipo')?.value === 'rural'" label="Vereda / Sector / Barrio" id="vereda"
+          name="vereda" formControlName="veredaSectorBarrio">
+        </app-input>
+        <app-input *ngIf="rufeForm.get('ubicacionTipo')?.value === 'urbano'" label="Vereda / Sector / Barrio"
+          id="barrio" name="barrio" formControlName="veredaSectorBarrio">
+        </app-input>
+        <app-input label="Dirección" id="direccion" name="direccion" formControlName="direccion" [required]="true">
+        </app-input>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Sección: Características del Bien -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Características del Bien
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+        <app-select label="Forma de Tenencia" id="forma-tenencia" name="forma-tenencia" [options]="tenencia"
+          formControlName="formaTenencia" [required]="true">
+        </app-select>
+        <app-select label="Estado del Bien" id="estado-bien" name="estado-bien" [options]="estadoBien"
+          formControlName="estadoBien" [required]="true">
+        </app-select>
+        <app-select label="Tipo de Bien" id="tipo-bien" name="tipo-bien" [options]="tipoBien" formControlName="tipoBien"
+          [required]="true">
+        </app-select>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Section: Alojamiento Actual -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Alojamiento Actual
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        <app-select label="Alojamiento Actual" id="alojamiento-actual" name="alojamiento-actual" [options]="alojamiento"
+          formControlName="alojamientoActual" [required]="true">
+        </app-select>
+
+        <app-input label="Lugar Habitual de Residencia" id="lugar-residencia" name="lugar-residencia"
+          formControlName="lugarHabitualResidencia" placeholder="Ej: Misma dirección">
+        </app-input>
+      </div>
+
+      <div class="mt-4 flex items-center space-x-6">
+        <div class="flex items-center">
+          <input type="checkbox" id="evacuado" formControlName="evacuadoFueraResidencia"
+            class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-600 dark:bg-gray-700 dark:border-gray-600" />
+          <label for="evacuado" class="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">
+            ¿Evacuado fuera de residencia?
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <app-input label="Vo.Bo. CMGRD" id="vobo" name="vobo" formControlName="voBoCmgrd"
+          placeholder="Ej: Aprobado, Pendiente">
+        </app-input>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Section: Personas (Dynamic Table) -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Personas
+      </h3>
+      <div formArrayName="personas" class="space-y-6">
+        <div *ngFor="let personaGroup of personas.controls; let i = index" [formGroupName]="i"
+          class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
+          <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Persona #{{ i + 1 }}</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+            <app-input label="Nombre(s)" id="nombre-{{i}}" name="nombre-{{i}}" formControlName="nombres"
+              [required]="true"></app-input>
+            <app-input label="Apellido(s)" id="apellido-{{i}}" name="apellido-{{i}}" formControlName="apellidos"
+              [required]="true"></app-input>
+
+            <app-select label="Tipo documento" id="tipo-doc-{{i}}" name="tipo-doc-{{i}}" [options]="documentTypes"
+              formControlName="tipoDocumento" [required]="true">
+            </app-select>
+
+            <app-input label="Número documento" id="num-doc-{{i}}" name="num-doc-{{i}}" type="number"
+              placeholder="Sin puntos ni comas" formControlName="numeroDocumento" [required]="true">
+              <ng-template #customError>
+                <p *ngIf="personaGroup.get('numeroDocumento')?.errors?.['uniqueDocument']"
+                  class="mt-2 text-sm text-red-600">
+                  Este número de documento ya existe.
+                </p>
+              </ng-template>
+            </app-input>
+
+            <app-input label="Fecha de nacimiento" id="fecha-nac-{{i}}" name="fecha-nac-{{i}}" type="date"
+              formControlName="fechaNacimiento"></app-input>
+
+            <app-select label="Género" id="genero-{{i}}" name="genero-{{i}}" [options]="genders"
+              formControlName="genero" [required]="true">
+            </app-select>
+
+            <app-select label="Parentesco" id="parentesco-{{i}}" name="parentesco-{{i}}" [options]="relationships"
+              formControlName="parentesco" [required]="true">
+            </app-select>
+
+            <app-select label="Etnia" id="etnia-{{i}}" name="etnia-{{i}}" [options]="ethnicities"
+              formControlName="etnia">
+            </app-select>
+
+            <app-input label="Teléfono" id="tel-{{i}}" name="tel-{{i}}" type="tel"
+              formControlName="telefono"></app-input>
+          </div>
+
+          <div class="absolute top-2 right-2">
+            <app-button *ngIf="personas.length > 1" type="button" variant="danger" customClasses="px-2 py-1 text-xs"
+              (click)="removePersona(i)">
+              Eliminar
+            </app-button>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addPersona()">
+          Agregar Persona
+        </app-button>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Section: Agropecuario (Dynamic Table) -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Agropecuario
+      </h3>
+      <div formArrayName="agropecuario" class="space-y-6">
+        <div *ngFor="let agroGroup of agropecuario.controls; let i = index" [formGroupName]="i"
+          class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
+          <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Ítem #{{ i + 1 }}</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+            <app-input label="Tipo de cultivo" id="cultivo-{{i}}" name="cultivo-{{i}}"
+              formControlName="tipoCultivo"></app-input>
+            <app-select label="Unidad de medida" id="medida-{{i}}" name="medida-{{i}}" [options]="measureUnits"
+              formControlName="unidadMedida"></app-select>
+            <app-input label="Área" id="area-{{i}}" name="area-{{i}}" type="number" formControlName="area"></app-input>
+            <app-input label="Cantidad" id="cantidad-{{i}}" name="cantidad-{{i}}" type="number"
+              formControlName="cantidad"></app-input>
+          </div>
+          <div class="absolute top-2 right-2">
+            <app-button *ngIf="agropecuario.length > 1" type="button" variant="danger" customClasses="px-2 py-1 text-xs"
+              (click)="removeAgropecuario(i)">
+              Eliminar
+            </app-button>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addAgropecuario()">
+          Agregar Ítem
+        </app-button>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Section: Sector Pecuario -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Sector Pecuario
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        <app-input label="Especie" id="especie" name="especie" formControlName="especie"></app-input>
+        <app-input label="Cantidad" id="cantidad-pecuaria" name="cantidad-pecuaria" type="number"
+          formControlName="cantidadPecuaria"></app-input>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+
+    <!-- Section: Observaciones -->
+    <div class="mb-6">
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Observaciones
+      </h3>
+      <textarea formControlName="observaciones" rows="4"
+        class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:focus:ring-indigo-500"></textarea>
+    </div>
+
+    <!-- Section: Form Actions -->
+    <div class="flex items-center justify-end space-x-4 mt-8">
+      <app-button type="button" variant="basic" (click)="onClear()">
+        Limpiar
+      </app-button>
+      <app-button type="submit" variant="primary">
+        Guardar
+      </app-button>
+    </div>
+  </form>
+</div>

@@ -6,9 +6,9 @@ import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { IMenuItem } from '../models/menu.model';
 import { environment } from '../../../environments/environment';
-import { IUser } from '../models/auth.model'; // Import IUser
-import { NetworkService } from './network.service'; // Importa el servicio de red
-import localForage from 'localforage';
+import { IUser } from '../models/auth.model';
+import { NetworkService } from './network.service';
+import { DatabaseService } from './database.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,8 +19,9 @@ export class MenuService {
 
   constructor(
     private http: HttpClient,
-    private networkService: NetworkService // Inyecta el servicio de red
-  ) {}
+    private networkService: NetworkService,
+    private db: DatabaseService
+  ) { }
 
   /**
    * Fetches the dynamic menu items for the authenticated organization.
@@ -31,49 +32,56 @@ export class MenuService {
    */
   getDynamicMenu(currentUser: IUser | null): Observable<IMenuItem[]> {
     const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
-    if (!this.networkService.isOnline  || isOfflineSession) {
-      // Intenta recuperar el menú dinámico guardado en local
+
+    // Check if offline or forcing offline session
+    if (!this.networkService.isOnline || isOfflineSession) {
       return new Observable<IMenuItem[]>(observer => {
-        localForage.getItem<IMenuItem[]>('dynamicMenu').then(menu => {
+        // Use DatabaseService instead of localForage
+        this.db.getMeta<IMenuItem[]>('dynamicMenu').then(menu => {
           if (menu && menu.length > 0) {
             this.menuItemsSubject.next(menu);
             observer.next(menu);
           } else {
-            // Si no hay menú guardado, muestra solo el menú mínimo
+            // Minimal offline fallback
             const offlineMenu: IMenuItem[] = [
               {
                 id: 1,
-                parentId: null,
-                nombreItem: 'Nuevo RUFE',
+                nombre: 'Nuevo RUFE',
                 ruta: '/rufe/new',
                 icono: 'add',
                 orden: 1,
-                subItems: null
+                children: null
               }
             ];
             this.menuItemsSubject.next(offlineMenu);
             observer.next(offlineMenu);
           }
           observer.complete();
+        }).catch(err => {
+          console.error('Error recovering menu from DB:', err);
+          observer.error(err);
         });
       });
     }
 
-    if (!currentUser || currentUser.organizacionId === undefined) {
-      console.error('MenuService: User not authenticated or organization ID missing.');
-      return throwError(() => new Error('No se pudo cargar el menú: Usuario no autenticado o ID de organización no disponible.'));
+    if (!currentUser || currentUser.rolId === undefined) {
+      console.error('MenuService: User not authenticated or Role ID missing.');
+      return throwError(() => new Error('No se pudo cargar el menú: Usuario no autenticado o ID de Rol no disponible.'));
     }
 
-    const organizacionId = currentUser.organizacionId;
+    const rolId = currentUser.rolId;
 
-    return this.http.get<IMenuItem[]>(`${environment.apiUrl}/api/organizaciones/${organizacionId}/menu-items/dynamic-menu`)
+    return this.http.get<IMenuItem[]>(`${environment.apiUrl}/api/menu/rol/${rolId}`)
       .pipe(
         tap(menuItems => {
           const sortedMenuItems = this.sortMenuItems(menuItems);
           this.menuItemsSubject.next(sortedMenuItems);
-          // Guarda el menú dinámico en local para uso offline
-          localForage.setItem('dynamicMenu', sortedMenuItems);
-          console.log('Dynamic menu loaded:', sortedMenuItems);
+          // Persist to DatabaseService for offline use
+          this.db.setMeta('dynamicMenu', sortedMenuItems).then(() => {
+            console.log('Dynamic menu saved to IndexedDB.');
+          }).catch(err => console.error('Failed to save menu to DB', err));
+
+          console.log('Dynamic menu loaded from API:', sortedMenuItems);
         }),
         catchError(this.handleError)
       );
@@ -84,7 +92,9 @@ export class MenuService {
    */
   clearMenu(): void {
     this.menuItemsSubject.next([]);
-    console.log('Menu items cleared.');
+    // Optionally clear from DB too if security requires it, but for offline support we often keep it.
+    // this.db.setMeta('dynamicMenu', []).catch(...); 
+    console.log('Menu items cleared from state.');
   }
 
   /**
@@ -98,8 +108,8 @@ export class MenuService {
     }
     const sorted = [...items].sort((a, b) => a.orden - b.orden);
     sorted.forEach(item => {
-      if (item.subItems && item.subItems.length > 0) {
-        item.subItems = this.sortMenuItems(item.subItems);
+      if (item.children && item.children.length > 0) {
+        item.children = this.sortMenuItems(item.children);
       }
     });
     return sorted;

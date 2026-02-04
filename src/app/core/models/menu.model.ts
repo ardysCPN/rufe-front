@@ -5,10 +5,9 @@
  */
 export interface IMenuItem {
   id: number;
-  parentId: number | null;
-  nombreItem: string;
-  ruta: string | null; // Null if it's a parent item without a direct route (e.g., "Administración")
-  icono: string; // Material Icon name (e.g., "dashboard", "group")
+  nombre: string;
+  ruta: string | null;
+  icono: string;
   orden: number;
-  subItems: IMenuItem[] | null; // Null if no sub-items, or an array of IMenuItem for children
+  children: IMenuItem[] | null;
 }

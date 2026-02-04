@@ -5,14 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { PermissionService } from '../../../core/services/permission.service';
+import { AdminRepository, User } from '../../../core/repositories/admin.repository';
 
-interface User {
-  id: number;
-  nombreCompleto: string;
-  email: string;
-  rolNombre: string;
-  activo: boolean;
-}
 
 @Component({
   selector: 'app-users',
@@ -117,16 +111,19 @@ interface User {
   `
 })
 export class UsersComponent implements OnInit {
-  users: User[] = []; // Populate with real data service
+  users: User[] = [];
   canCreate = false;
   canEdit = false;
   canDelete = false;
 
-  constructor(private permissionService: PermissionService) { }
+  constructor(
+    private permissionService: PermissionService,
+    private adminRepository: AdminRepository
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
-    this.loadMockData(); // Replace with API call
+    this.loadUsers();
   }
 
   checkPermissions() {
@@ -135,11 +132,28 @@ export class UsersComponent implements OnInit {
     this.canDelete = this.permissionService.hasPermission('usuarios:eliminar');
   }
 
-  loadMockData() {
-    this.users = [
-      { id: 1, nombreCompleto: 'Admin Global', email: 'admin@global.com', rolNombre: 'ADMIN_GLOBAL', activo: true },
-      { id: 2, nombreCompleto: 'Juan Pérez', email: 'juan@empresa.com', rolNombre: 'CAPTURADOR', activo: true },
-      { id: 3, nombreCompleto: 'Maria Lopez', email: 'maria@empresa.com', rolNombre: 'LECTOR', activo: false },
-    ];
+  loadUsers() {
+    this.adminRepository.getUsers().subscribe({
+      next: (data) => {
+        this.users = data;
+      },
+      error: (err) => {
+        console.error('Error loading users', err);
+        // TODO: Show error notification
+      }
+    });
+  }
+
+  deleteUser(user: User) {
+    if (confirm(`¿Estás seguro de eliminar a ${user.nombreCompleto}?`)) {
+      this.adminRepository.deleteUser(user.id!).subscribe({
+        next: () => {
+          this.loadUsers(); // Refresh list
+        },
+        error: (err) => {
+          console.error('Error deleting user', err);
+        }
+      });
+    }
   }
 }

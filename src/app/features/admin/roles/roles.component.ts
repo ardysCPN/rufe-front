@@ -4,12 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PermissionService } from '../../../core/services/permission.service';
+import { AdminRepository, Role } from '../../../core/repositories/admin.repository';
 
-interface Role {
-  id: number;
-  nombreRol: string;
-  descripcion: string;
-}
 
 @Component({
   selector: 'app-roles',
@@ -59,13 +55,15 @@ interface Role {
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <!--
                     <button mat-icon-button class="text-purple-600" *ngIf="canEdit" matTooltip="Editar Permisos">
                       <mat-icon>lock_open</mat-icon>
                     </button>
+                    -->
                      <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar">
+                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar" (click)="deleteRole(role)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -84,24 +82,41 @@ export class RolesComponent implements OnInit {
   canEdit = false;
   canDelete = false;
 
-  constructor(private permissionService: PermissionService) { }
+  constructor(
+    private permissionService: PermissionService,
+    private adminRepository: AdminRepository
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
-    this.loadMockData();
+    this.loadRoles();
   }
 
   checkPermissions() {
     this.canCreate = this.permissionService.hasPermission('roles:crear');
+    // this.canEdit = this.permissionService.hasPermission('roles:actualizar');
+    // Assuming update permission serves for both editing and managing permissions for now
     this.canEdit = this.permissionService.hasPermission('roles:actualizar');
     this.canDelete = this.permissionService.hasPermission('roles:eliminar');
   }
 
-  loadMockData() {
-    this.roles = [
-      { id: 1, nombreRol: 'ADMIN_GLOBAL', descripcion: 'Acceso total al sistema' },
-      { id: 2, nombreRol: 'ADMIN_ORGANIZACION', descripcion: 'Administra su propia organización' },
-      { id: 3, nombreRol: 'CAPTURADOR', descripcion: 'Puede crear y ver sus propios registros' },
-    ];
+  loadRoles() {
+    this.adminRepository.getRoles().subscribe({
+      next: (data) => {
+        this.roles = data;
+      },
+      error: (err) => {
+        console.error('Error loading roles', err);
+      }
+    });
+  }
+
+  deleteRole(role: Role) {
+    if (confirm(`¿Estás seguro de eliminar el rol ${role.nombreRol}?`)) {
+      this.adminRepository.deleteRole(role.id!).subscribe({
+        next: () => this.loadRoles(),
+        error: (err) => console.error('Error deleting role', err)
+      });
+    }
   }
 }

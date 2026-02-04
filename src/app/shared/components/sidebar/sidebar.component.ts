@@ -36,7 +36,7 @@ import { IMenuItem } from '../../../core/models/menu.model';
 
       <nav class="space-y-2 px-3 text-sm font-medium">
         <ng-container *ngFor="let item of menuItems">
-          <details *ngIf="item.subItems && item.subItems.length > 0" class="group [&_summary::-webkit-details-marker]:hidden">
+          <details *ngIf="item.children && item.children.length > 0" class="group [&_summary::-webkit-details-marker]:hidden">
             <summary
               class="flex items-center justify-between px-4 py-3 text-gray-600 rounded-xl cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-all duration-200"
               [class.bg-blue-50]="isActiveParent(item)"
@@ -45,33 +45,33 @@ import { IMenuItem } from '../../../core/models/menu.model';
             >
               <div class="flex items-center gap-4">
                 <mat-icon class="text-gray-400 group-hover:text-blue-600 transition-colors">{{ item.icono }}</mat-icon>
-                <span *ngIf="!collapsed || hovering" class="truncate">{{ item.nombreItem }}</span>
+                <span *ngIf="!collapsed || hovering" class="truncate">{{ item.nombre }}</span>
               </div>
               <mat-icon class="text-gray-400 transition-transform duration-300 group-open:rotate-180" *ngIf="!collapsed || hovering">expand_more</mat-icon>
             </summary>
 
             <div class="mt-2 space-y-1 pl-4" *ngIf="!collapsed || hovering">
               <a
-                *ngFor="let subItem of item.subItems"
+                *ngFor="let subItem of item.children"
                 [routerLink]="subItem.ruta"
                 routerLinkActive="bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none"
                 class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-500 hover:text-blue-700 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-all duration-200"
               >
                <span class="w-1.5 h-1.5 rounded-full bg-current opacity-50"></span>
-               {{ subItem.nombreItem }}
+               {{ subItem.nombre }}
               </a>
             </div>
           </details>
 
           <a
-            *ngIf="!item.subItems || item.subItems.length === 0"
+            *ngIf="!item.children || item.children.length === 0"
             [routerLink]="item.ruta"
             routerLinkActive="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-300/50 dark:shadow-none"
             #rla="routerLinkActive"
             class="flex items-center gap-4 rounded-xl px-4 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-all duration-200 group"
           >
             <mat-icon [class.text-white]="rla.isActive" class="text-gray-400 group-hover:text-blue-600 transition-colors">{{ item.icono }}</mat-icon>
-            <span *ngIf="!collapsed || hovering" class="truncate">{{ item.nombreItem }}</span>
+            <span *ngIf="!collapsed || hovering" class="truncate">{{ item.nombre }}</span>
           </a>
         </ng-container>
       </nav>

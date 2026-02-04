@@ -23,7 +23,6 @@ export interface IUser {
 export interface ILoginCredentials {
   email: string;
   password: string;
-  organizacion: string;
 }
 
 /**

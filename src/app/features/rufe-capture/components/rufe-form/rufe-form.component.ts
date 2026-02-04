@@ -1,18 +1,27 @@
 // src/app/features/rufe-capture/components/rufe-form/rufe-form.component.ts
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray, AbstractControl } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { SuccessModalComponent } from '../../../../shared/components/modals/success-modal.component';
 import { ICatalogoItemResponse, ICatalogoMunicipio } from '../../../../models/catalogs.model';
+import { environment } from '../../../../../environments/environment';
+import { DateUtils } from '../../../../core/utils/date.utils';
+import { v4 as uuidv4 } from 'uuid';
 
-// Import reusable components
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { SelectComponent } from '../../../../shared/components/select/select.component';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 
+
+
 // Import services and repositories
 import { RufeRepository } from '../../../../core/repositories/rufe.repository';
 import { CatalogRepository } from '../../../../core/repositories/catalog.repository';
+import { EventosRepository, EventoReal } from '../../../../core/repositories/eventos.repository';
 import { NetworkService } from '../../../../core/services/network.service';
 
 // Custom validator for unique document numbers within the FormArray
@@ -45,18 +54,24 @@ function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any
     ReactiveFormsModule,
     InputComponent,
     SelectComponent,
-    ButtonComponent
+    ButtonComponent,
+    MatDialogModule
   ],
   templateUrl: './rufe-form.component.html',
 })
 export class RufeFormComponent implements OnInit {
   rufeForm: FormGroup;
+  isSubmitting = false; // Control de bloqueo botón guardar
+
 
   // Catalog properties
   departments: ICatalogoItemResponse[] = [];
-  allMunicipalities: ICatalogoMunicipio[] = []; // To store all municipalities from DB
+  allMunicipalities: ICatalogoMunicipio[] = [];
   filteredMunicipalities: ICatalogoItemResponse[] = [];
-  events: ICatalogoItemResponse[] = [];
+  tiposEvento: ICatalogoItemResponse[] = []; // Catálogo de tipos (tabla evento)
+  events: EventoReal[] = []; // Eventos REALES (tabla eventos)
+  eventsForSelect: ICatalogoItemResponse[] = []; // Adaptador para el select
+  selectedEvent: EventoReal | null = null; // Evento seleccionado para mostrar info
   documentTypes: ICatalogoItemResponse[] = [];
   genders: ICatalogoItemResponse[] = [];
   relationships: ICatalogoItemResponse[] = [];
@@ -71,15 +86,21 @@ export class RufeFormComponent implements OnInit {
     private fb: FormBuilder,
     private rufeRepository: RufeRepository,
     private catalogRepository: CatalogRepository,
-    private network: NetworkService
+    private eventosRepository: EventosRepository,
+    private network: NetworkService,
+    private http: HttpClient,
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef,
+    private dialog: MatDialog
   ) {
     this.rufeForm = this.fb.group({
+      evento: [null, Validators.required], // Evento Real (Contexto)
+      tipoEvento: [null, Validators.required], // Tipo de Evento (Observado en sitio)
       departamento: [null, Validators.required],
       municipio: [{ value: null, disabled: true }, Validators.required],
-      evento: [null, Validators.required],
       fechaEvento: [''],
       fechaRufe: [''],
-      ubicacionTipo: [null], // 'urbano' or 'rural'
+      ubicacionTipo: [null],
       corregimiento: [''],
       veredaSectorBarrio: [''],
       direccion: [''],
@@ -87,6 +108,9 @@ export class RufeFormComponent implements OnInit {
       formaTenencia: [null, Validators.required],
       estadoBien: [null, Validators.required],
       tipoBien: [null, Validators.required],
+      lugarHabitualResidencia: [''],
+      evacuadoFueraResidencia: [false],
+      voBoCmgrd: [''],
       personas: this.fb.array([this.createPersonaFormGroup()]),
       agropecuario: this.fb.array([this.createAgropecuarioFormGroup()]),
       especie: [''],
@@ -121,13 +145,42 @@ export class RufeFormComponent implements OnInit {
         this.onDepartmentChange(departmentId);
       }
     });
+
+    // Listener para mostrar información del evento seleccionado
+    this.rufeForm.get('evento')?.valueChanges.subscribe(eventoId => {
+      if (eventoId) {
+        this.selectedEvent = this.events.find(e => e.id === eventoId) || null;
+      } else {
+        this.selectedEvent = null;
+      }
+    });
   }
 
   async loadCatalogs(): Promise<void> {
     try {
       this.departments = await this.catalogRepository.getAllDepartamentos();
       this.allMunicipalities = await this.catalogRepository.getAllMunicipios();
-      this.events = await this.catalogRepository.getAllEventos();
+      // Cargar TIPOS de eventos desde catálogo (tabla evento)
+      this.tiposEvento = await this.catalogRepository.getAllEventos();
+
+      // 1. Cargar eventos REALES desde cache (IndexedDB) para visualización inmediata
+      this.events = await this.eventosRepository.getAllFromCache();
+      this.updateEventsSelect();
+
+      // Asegurar que si la lista está vacía pero hay conexión, no se bloquee el usuario esperando
+      if (this.events.length === 0 && this.network.isOnline) {
+        // El sync de abajo llenará la lista
+      }
+
+      // 2. Si hay conexión, sincronizar en segundo plano y actualizar vista
+      if (this.network.isOnline) {
+        this.eventosRepository.sync().then(async () => {
+          this.events = await this.eventosRepository.getAllFromCache();
+          this.updateEventsSelect();
+          console.log('Eventos actualizados desde el servidor.');
+        }).catch(err => console.error('Fallo sync eventos fondo', err));
+      }
+
       this.documentTypes = await this.catalogRepository.getAllTiposDocumento();
       this.genders = await this.catalogRepository.getAllGeneros();
       this.relationships = await this.catalogRepository.getAllParentescos();
@@ -138,8 +191,17 @@ export class RufeFormComponent implements OnInit {
       this.tipoBien = await this.catalogRepository.getAllTipoBien();
       // TODO: Cargar el catálogo de unidades de medida si existe en el repositorio.
     } catch (error) {
+      console.error('Error loading catalogs', error);
       // Silent catch for production log or use a logger service
     }
+  }
+
+  private updateEventsSelect(): void {
+    this.eventsForSelect = this.events.map(e => ({
+      id: e.id!,
+      nombre: e.nombreEvento
+    }));
+    this.cdr.detectChanges(); // Forzar actualización de vista
   }
 
   // Getters for FormArrays
@@ -227,77 +289,211 @@ export class RufeFormComponent implements OnInit {
   }
 
   async onSubmit(): Promise<void> {
+    if (this.isSubmitting) return; // Prevenir múltiples clics
+
     if (this.rufeForm.valid) {
-      // Usar getRawValue() para incluir los valores de campos deshabilitados (como el municipio).
-      const rufeValue = this.rufeForm.getRawValue();
+      this.isSubmitting = true; // Bloquear botón
+      this.rufeForm.disable(); // Deshabilitar formulario visualmente
 
       try {
-        // Guardar RUFE + personas en DB local
-        const rufeId = await this.rufeRepository.saveRufeWithIntegrantes(
-          {
-            departamentoId: rufeValue.departamento,
-            municipioId: rufeValue.municipio,
-            eventoId: rufeValue.evento,
-            fechaEvento: rufeValue.fechaEvento,
-            fechaRufe: rufeValue.fechaRufe,
-            ubicacionTipo: rufeValue.ubicacionTipo,
-            corregimiento: rufeValue.corregimiento,
-            veredaSectorBarrio: rufeValue.veredaSectorBarrio,
-            direccion: rufeValue.direccion,
-            alojamientoActual: rufeValue.alojamientoActual,
-            formaTenencia: rufeValue.formaTenencia,
-            estadoBien: rufeValue.estadoBien,
-            tipoBien: rufeValue.tipoBien,
-            especie: rufeValue.especie,
-            cantidadPecuaria: rufeValue.cantidadPecuaria,
-            observaciones: rufeValue.observaciones
-          },
-          rufeValue.personas.map((p: any) => ({
-            nombres: p.nombres,
-            apellidos: p.apellidos,
-            tipoDocumento: p.tipoDocumento,
-            numeroDocumento: p.numeroDocumento,
-            fechaNacimiento: p.fechaNacimiento,
-            genero: p.genero,
-            parentesco: p.parentesco,
-            etnia: p.etnia,
-            telefono: p.telefono
-          }))
-        );
+        const rufeValue = this.rufeForm.getRawValue();
+        const payload = this.buildBackendPayload(rufeValue);
+        let sentToServer = false;
 
-        // TODO: Replace with Toast Notification
-        const message = this.network.isOnline
-          ? 'Formulario guardado localmente y pendiente de sincronizar.'
-          : 'Formulario guardado offline. Se sincronizará cuando vuelva la conexión.';
+        // Intentar enviar al backend si hay red
+        if (this.network.isOnline) {
+          try {
+            await this.http.post(`${environment.apiUrl}/api/rufe`, payload).toPromise();
+            sentToServer = true;
+            this.showSuccessModal('Enviado Exitosamente', 'La información se ha cargado correctamente en el servidor.');
+          } catch (error) {
+            console.error('Error al enviar al backend (HTTP o Red), procediendo a guardar localmente:', error);
+            // Fallthrough to local save
+          }
+        }
 
-        // Temporarily using console instead of alert
-        // console.log(message); 
+        if (!sentToServer) {
+          try {
+            await this.rufeRepository.saveRufeWithIntegrantes(
+              {
+                departamentoId: rufeValue.departamento,
+                municipioId: rufeValue.municipio,
+                eventoId: rufeValue.evento,
+                tipoEventoId: rufeValue.tipoEvento,
+                fechaEvento: rufeValue.fechaEvento,
+                fechaRufe: DateUtils.toLocalDateTime(rufeValue.fechaRufe) || DateUtils.currentLocalDateTime(),
+                ubicacionTipo: rufeValue.ubicacionTipo,
+                corregimiento: rufeValue.corregimiento,
+                veredaSectorBarrio: rufeValue.veredaSectorBarrio,
+                direccion: rufeValue.direccion,
+                alojamientoActual: rufeValue.alojamientoActual,
+                formaTenencia: rufeValue.formaTenencia,
+                estadoBien: rufeValue.estadoBien,
+                tipoBien: rufeValue.tipoBien,
+                especie: rufeValue.especie,
+                cantidadPecuaria: rufeValue.cantidadPecuaria,
+                observaciones: rufeValue.observaciones
+              },
+              rufeValue.personas.map((p: any) => ({
+                nombres: p.nombres,
+                apellidos: p.apellidos,
+                tipoDocumento: p.tipoDocumento,
+                numeroDocumento: p.numeroDocumento,
+                fechaNacimiento: p.fechaNacimiento,
+                genero: p.genero,
+                parentesco: p.parentesco,
+                etnia: p.etnia,
+                telefono: p.telefono
+              }))
+            );
 
-        this.onClear();
+            this.showSuccessModal('Guardado Offline', 'No hay conexión o el servidor no respondió. El formulario se guardó localmente y se sincronizará luego.');
 
-      } catch (error) {
-        // console.error('Error al guardar en IndexedDB:', error);
-        // TODO: Show Error Toast
+          } catch (error) {
+            console.error('Error crítico al guardar en IndexedDB:', error);
+            if (error instanceof Error && (error.message.includes('Duplicado') || error.name === 'PrematureCommitError')) {
+              // Hack: Si es PrematureCommitError pero los datos están (según reporte usuario), podríamos asumir éxito
+              // O si arreglamos el repo, esto no debería pasar.
+              // Si sigue pasando, avisar al usuario.
+              this.snackBar.open('⚠️ Error al guardar (DB Local). Intente de nuevo.', 'Cerrar', { duration: 5000 });
+            } else {
+              this.snackBar.open('❌ Error crítico al guardar el formulario localmente.', 'Cerrar', {
+                duration: 5000,
+                panelClass: ['snackbar-error']
+              });
+            }
+          }
+        }
+      } finally {
+        this.isSubmitting = false;
+        // Don't enable form here if successful, because fullReset() will handle state.
+        // Check if form is still disabled (implying failure/still on same page without reset)
+        if (this.rufeForm.disabled && !this.isSubmitting) {
+          this.rufeForm.enable();
+        }
       }
 
     } else {
       this.rufeForm.markAllAsTouched();
       this.logValidationErrors(this.rufeForm);
-      // TODO: Show Warning Toast
+      this.snackBar.open('⚠️ Por favor completa todos los campos requeridos', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warn']
+      });
     }
   }
 
+  private showSuccessModal(title: string, message: string): void {
+    const dialogRef = this.dialog.open(SuccessModalComponent, {
+      data: {
+        title: title,
+        message: message,
+        buttonText: 'Aceptar y Nuevo Registro'
+      },
+      disableClose: true // Force user to click button
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.fullReset();
+    });
+  }
+
+  private buildBackendPayload(formValue: any): any {
+    const fechaRegistro = formValue.fechaRufe
+      ? DateUtils.toLocalDateTime(formValue.fechaRufe) || DateUtils.currentLocalDateTime()
+      : new Date().toISOString();
+
+    return {
+      tipoEventoId: formValue.tipoEvento, // Seleccionado manualmente
+      eventoId: formValue.evento,
+      clienteId: uuidv4(),
+      fechaRegistro: fechaRegistro,
+      tipoUbicacionBienId: formValue.ubicacionTipo === 'urbano' ? 1 : 2,
+      corregimiento: formValue.corregimiento || null,
+      veredaSectorBarrio: formValue.veredaSectorBarrio || null,
+      direccion: formValue.direccion,
+      tipoAlojamientoActualId: formValue.alojamientoActual,
+      lugarHabitualResidencia: formValue.lugarHabitualResidencia || formValue.direccion,
+      evacuadoFueraResidencia: formValue.evacuadoFueraResidencia || false,
+      observaciones: formValue.observaciones || null,
+      voBoCmgrd: formValue.voBoCmgrd || 'Pendiente',
+      integrantes: formValue.personas.map((p: any) => ({
+        clienteId: uuidv4(),
+        nombres: p.nombres,
+        apellidos: p.apellidos,
+        tipoDocumentoId: p.tipoDocumento,
+        numeroDocumento: p.numeroDocumento,
+        fechaNacimiento: p.fechaNacimiento,
+        parentescoId: p.parentesco,
+        generoId: p.genero,
+        pertenenciaEtnicaId: p.etnia || null,
+        telefono: p.telefono || null
+      })),
+      bienesAfectados: [
+        {
+          clienteId: uuidv4(),
+          tipoBienId: formValue.tipoBien,
+          formaTenenciaBienId: formValue.formaTenencia,
+          estadoBienId: formValue.estadoBien
+        }
+      ],
+      activosAgropecuarios: formValue.cantidadPecuaria ? [
+        {
+          clienteId: uuidv4(),
+          sector: 'PECUARIO',
+          especieAnimal: formValue.especie || 'No especificado',
+          cantidadAnimal: Number(formValue.cantidadPecuaria)
+        }
+      ] : []
+    };
+  }
+
   onClear(): void {
+    this.fullReset();
+  }
+
+  async fullReset(): Promise<void> {
+    // 1. Reset Form State immediately to clear UI
     this.rufeForm.reset();
-    // Reestablece los FormArray a su estado inicial
+    this.rufeForm.enable();
+    this.isSubmitting = false;
+
+    // 2. Clear Arrays
     this.personas.clear();
     this.personas.push(this.createPersonaFormGroup());
-
     this.agropecuario.clear();
     this.agropecuario.push(this.createAgropecuarioFormGroup());
 
-    // Limpia la lista de municipios filtrados
+    // 3. Reset specific UI states
     this.filteredMunicipalities = [];
+    this.selectedEvent = null;
     this.rufeForm.get('municipio')?.disable();
+
+    // 4. Reload catalogs and force re-validation/reset of selects
+    try {
+      await this.loadCatalogs();
+
+      // Force values to null again after catalogs load to ensure SelectComponents update correctly
+      // with the new options list.
+      this.rufeForm.patchValue({
+        evento: null,
+        tipoEvento: null,
+        departamento: null,
+        municipio: null,
+        alojamientoActual: null,
+        formaTenencia: null,
+        estadoBien: null,
+        tipoBien: null,
+        ubicacionTipo: null
+      });
+
+      this.cdr.detectChanges();
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+
+    } catch (error) {
+      console.error('Error reloading catalogs during reset:', error);
+    }
   }
 }

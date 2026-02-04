@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
+import { RufeRepository } from '../../../../core/repositories/rufe.repository';
 
 @Component({
   selector: 'app-rufe-list',
@@ -86,18 +87,31 @@ import { Router } from '@angular/router';
 export class RufeListComponent implements OnInit {
   rufes: any[] = [];
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    private rufeRepository: RufeRepository
+  ) { }
 
-  ngOnInit(): void {
-    // Mock Data
-    this.rufes = [
-      { fecha: '2024-01-19', folio: 'RF-2024-001', beneficiario: 'Maria Gonzalez', sync: true },
-      { fecha: '2024-01-19', folio: 'RF-2024-002', beneficiario: 'Pedro Martinez', sync: false },
-      { fecha: '2024-01-18', folio: 'RF-2024-003', beneficiario: 'Laura Silva', sync: true },
-    ];
+  async ngOnInit(): Promise<void> {
+    await this.loadRufes();
+  }
+
+  async loadRufes(): Promise<void> {
+    // 1. Cargar locales (pendientes y sincronizados)
+    const localRufes = await this.rufeRepository.getAllRufes();
+
+    // Mapear a la estructura de la tabla
+    this.rufes = localRufes.map(r => ({
+      fecha: r.fechaRufe ? r.fechaRufe.split('T')[0] : r.fecha_creacion_offline.toISOString().split('T')[0],
+      folio: r.cliente_id.substring(0, 8).toUpperCase(), // Simulado por ahora
+      beneficiario: 'Consultar detalle', // TODO: Obtener del primer integrante o guardar en IRufeLocal
+      sync: r.estado_sincronizacion === 'sincronizado',
+      estado: r.estado_sincronizacion,
+      clienteId: r.cliente_id
+    }));
   }
 
   createNew() {
-    this.router.navigate(['/rufe/new']);
+    this.router.navigate(['/rufe/capture']);
   }
 }

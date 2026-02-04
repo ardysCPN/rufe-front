@@ -20,14 +20,32 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
-        path: 'rufe-list',
+        path: 'rufe/list',
         loadComponent: () => import('./features/rufe-list/components/rufe-table/rufe-table.component').then(m => m.RufeListComponent)
       },
       {
         path: 'rufe/new',
         loadComponent: () => import('./features/rufe-capture/components/rufe-form/rufe-form.component').then(m => m.RufeFormComponent)
       },
-      // Admin routes
+      // Events
+      {
+        path: 'events/list',
+        loadComponent: () => import('./features/events/events-list/events-list.component').then(m => m.EventsListComponent)
+      },
+      {
+        path: 'events/new',
+        loadComponent: () => import('./features/events/event-config/event-config.component').then(m => m.EventConfigComponent)
+      },
+      // Reports
+      {
+        path: 'reports/dashboard',
+        loadComponent: () => import('./features/reports/reports-dashboard/reports-dashboard.component').then(m => m.ReportsDashboardComponent)
+      },
+      {
+        path: 'reports/export',
+        loadComponent: () => import('./features/reports/report-export/report-export.component').then(m => m.ReportExportComponent)
+      },
+      // Extra Admin routes
       {
         path: 'admin/users',
         loadComponent: () => import('./features/admin/users/users.component').then(m => m.UsersComponent)
@@ -39,6 +57,23 @@ export const routes: Routes = [
       {
         path: 'admin/organizations',
         loadComponent: () => import('./features/admin/organizations/organization-management/organization-management.component').then(m => m.OrganizationManagementComponent)
+      },
+      {
+        path: 'admin/catalogs',
+        loadComponent: () => import('./features/admin/catalogs/catalog-management.component').then(m => m.CatalogManagementComponent)
+      },
+      {
+        path: 'admin/audit',
+        loadComponent: () => import('./features/admin/audit/audit-logs.component').then(m => m.AuditLogsComponent)
+      },
+      // Tools
+      {
+        path: 'tools/sub',
+        loadComponent: () => import('./features/tools/sub-tools/sub-tools.component').then(m => m.SubToolsComponent)
+      },
+      {
+        path: 'tools/sync-status',
+        loadComponent: () => import('./features/tools/sync-status/sync-status.component').then(m => m.SyncStatusComponent)
       },
       // Fallback for any path within the protected area that doesn't match
       { path: '**', redirectTo: '/dashboard' } // Redirect to dashboard if in protected area and path not found

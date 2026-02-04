@@ -52,6 +52,7 @@ export class DatabaseService extends Dexie {
   catalogos_tipo_bien!: Table<ICatalogoTipoBien, number>;
   catalogos_pertenencia_etnica!: Table<ICatalogoPertenenciaEtnica, number>;
   catalogos_eventos!: Table<ICatalogoEvento, number>;
+  eventos_reales!: Table<any, number>; // Eventos reales de la organización
 
   // Meta table for small app metadata
   meta!: Table<IMeta, string>; // Primary key is key (string)
@@ -97,6 +98,7 @@ export class DatabaseService extends Dexie {
       catalogos_tipo_bien: '&id, nombre',
       catalogos_pertenencia_etnica: '&id, nombre',
       catalogos_eventos: '&id, nombre',
+      eventos_reales: '&id, nombreEvento, tipoEvento, fechaEvento',
       meta: '&key'
     });
   }
@@ -181,6 +183,7 @@ export class DatabaseService extends Dexie {
         await this.catalogos_tipo_bien.clear();
         await this.catalogos_pertenencia_etnica.clear();
         await this.catalogos_eventos.clear();
+        await this.eventos_reales.clear();
         await this.meta.clear();
       });
       console.log('Todas las tablas de IndexedDB han sido limpiadas.');

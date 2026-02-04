@@ -4,12 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AdminRepository, Organization } from '../../../../core/repositories/admin.repository';
 
-interface Organization {
-  id: number;
-  nombreOrganizacion: string;
-  activa: boolean;
-}
 
 @Component({
   selector: 'app-organization-management',
@@ -70,7 +66,7 @@ interface Organization {
                     <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar">
+                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar" (click)="deleteOrganization(org)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -89,11 +85,14 @@ export class OrganizationManagementComponent implements OnInit {
   canEdit = false;
   canDelete = false;
 
-  constructor(private permissionService: PermissionService) { }
+  constructor(
+    private permissionService: PermissionService,
+    private adminRepository: AdminRepository
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
-    this.loadMockData();
+    this.loadOrganizations();
   }
 
   checkPermissions() {
@@ -102,11 +101,19 @@ export class OrganizationManagementComponent implements OnInit {
     this.canDelete = this.permissionService.hasPermission('organizaciones:eliminar');
   }
 
-  loadMockData() {
-    this.organizations = [
-      { id: 1, nombreOrganizacion: 'GlobalCorp', activa: true },
-      { id: 2, nombreOrganizacion: 'Cliente Demo', activa: true },
-      { id: 3, nombreOrganizacion: 'Empresa Inactiva', activa: false },
-    ];
+  loadOrganizations() {
+    this.adminRepository.getOrganizations().subscribe({
+      next: (data) => this.organizations = data,
+      error: (err) => console.error('Error loading organizations', err)
+    });
+  }
+
+  deleteOrganization(org: Organization) {
+    if (confirm(`¿Estás seguro de desactivar/eliminar la organización ${org.nombreOrganizacion}?`)) {
+      this.adminRepository.deleteOrganization(org.id!).subscribe({
+        next: () => this.loadOrganizations(),
+        error: (err) => console.error('Error deleting org', err)
+      });
+    }
   }
 }

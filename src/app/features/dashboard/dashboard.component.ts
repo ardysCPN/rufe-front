@@ -117,7 +117,7 @@ import { IMenuItem } from '../../core/models/menu.model'; // Added IMenuItem
 
            <!-- Ver Registros -->
            <button 
-              (click)="navigateTo('/rufe/list')"
+              (click)="navigateTo('/rufe')"
               class="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow border-2 border-transparent hover:border-green-500 hover:shadow-lg transition-all group cursor-pointer"
             >
               <div class="w-12 h-12 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -181,7 +181,7 @@ export class DashboardComponent implements OnInit {
       if (!items) return false;
       for (const item of items) {
         if (item.ruta === route && item.ruta !== '') return true;
-        if (item.subItems && find(item.subItems)) return true;
+        if (item.children && find(item.children)) return true;
       }
       return false;
     }

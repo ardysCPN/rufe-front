@@ -11,6 +11,7 @@ export interface IRufeLocal {
   departamentoId: number;
   municipioId: number;
   eventoId: number;
+  tipoEventoId: number;
   fechaEvento: string;
   fechaRufe: string;
   ubicacionTipo: string; // 'urbano' o 'rural'
