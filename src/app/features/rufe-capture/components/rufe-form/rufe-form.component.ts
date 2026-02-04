@@ -60,9 +60,11 @@ function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any
   templateUrl: './rufe-form.component.html',
 })
 export class RufeFormComponent implements OnInit {
-  rufeForm: FormGroup;
+  rufeForm!: FormGroup;
   isSubmitting = false; // Control de bloqueo botón guardar
 
+
+  isViewActive = true; // Control para Soft Reload
 
   // Catalog properties
   departments: ICatalogoItemResponse[] = [];
@@ -93,6 +95,14 @@ export class RufeFormComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) {
+    this.createForm();
+  }
+
+  ngOnInit(): void {
+    this.initForm();
+  }
+
+  createForm(): void {
     this.rufeForm = this.fb.group({
       evento: [null, Validators.required], // Evento Real (Contexto)
       tipoEvento: [null, Validators.required], // Tipo de Evento (Observado en sitio)
@@ -119,7 +129,7 @@ export class RufeFormComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
+  async initForm(): Promise<void> {
     await this.loadCatalogs();
 
     // Escucha cambios en el tipo de ubicación para manejar validaciones condicionales
@@ -452,48 +462,30 @@ export class RufeFormComponent implements OnInit {
     this.fullReset();
   }
 
-  async fullReset(): Promise<void> {
-    // 1. Reset Form State immediately to clear UI
-    this.rufeForm.reset();
-    this.rufeForm.enable();
+  fullReset(): void {
+    // Soft Reload Strategy:
+    // 1. Destroy the view immediately
+    this.isViewActive = false;
     this.isSubmitting = false;
 
-    // 2. Clear Arrays
-    this.personas.clear();
-    this.personas.push(this.createPersonaFormGroup());
-    this.agropecuario.clear();
-    this.agropecuario.push(this.createAgropecuarioFormGroup());
+    // 2. Re-create the form object in memory (fresh state)
+    this.createForm();
 
-    // 3. Reset specific UI states
+    // 3. Reset auxiliary states
     this.filteredMunicipalities = [];
     this.selectedEvent = null;
-    this.rufeForm.get('municipio')?.disable();
 
-    // 4. Reload catalogs and force re-validation/reset of selects
-    try {
-      await this.loadCatalogs();
+    // 4. Force view destruction cycle
+    this.cdr.detectChanges();
 
-      // Force values to null again after catalogs load to ensure SelectComponents update correctly
-      // with the new options list.
-      this.rufeForm.patchValue({
-        evento: null,
-        tipoEvento: null,
-        departamento: null,
-        municipio: null,
-        alojamientoActual: null,
-        formaTenencia: null,
-        estadoBien: null,
-        tipoBien: null,
-        ubicacionTipo: null
-      });
-
-      this.cdr.detectChanges();
+    // 5. Re-create view and re-initialize logic
+    setTimeout(() => {
+      this.isViewActive = true;
+      this.cdr.markForCheck(); // Ensure the *ngIf update is detected
+      this.initForm(); // Re-bind listeners and re-load catalogs
 
       // Scroll to top
       window.scrollTo(0, 0);
-
-    } catch (error) {
-      console.error('Error reloading catalogs during reset:', error);
-    }
+    }, 50); // Small delay to guarantee DOM teardown/rebuild
   }
 }
