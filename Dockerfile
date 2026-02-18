@@ -7,5 +7,5 @@ RUN npm run build -- --configuration production
 
 # Stage 2 - Serve with Nginx
 FROM nginx:alpine
-COPY --from=builder /app/dist/rufe-app /usr/share/nginx/html
+COPY --from=builder /app/dist/rufe-app/browser /usr/share/nginx/html
 EXPOSE 80
