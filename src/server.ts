@@ -13,16 +13,13 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Serve environment configuration for the client.
  */
+app.get('/api/config', (req, res) => {
+  res.json({
+    apiUrl: process.env['API_URL'] || 'http://localhost:8080'
+  });
+});
 
 /**
  * Serve static files from /browser
