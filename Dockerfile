@@ -5,11 +5,15 @@ COPY . .
 RUN npm install
 RUN npm run build
 
-# Stage 2 - Run SSR server
+# Stage 2 - Run SSR
 FROM node:20-alpine
 WORKDIR /app
 
-COPY --from=builder /app/dist/rufe-app ./dist
+# 👇 Copiar TODA la carpeta dist completa
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+
+RUN npm install --omit=dev
 
 EXPOSE 4000
 
