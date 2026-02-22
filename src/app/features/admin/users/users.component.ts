@@ -4,8 +4,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AdminRepository, User } from '../../../core/repositories/admin.repository';
+import { UserFormDialogComponent } from './user-form-dialog.component';
 
 
 @Component({
@@ -16,7 +18,8 @@ import { AdminRepository, User } from '../../../core/repositories/admin.reposito
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatChipsModule
+    MatChipsModule,
+    MatDialogModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
@@ -34,6 +37,7 @@ import { AdminRepository, User } from '../../../core/repositories/admin.reposito
           color="primary" 
           *ngIf="canCreate"
           class="rounded-lg px-6 py-2 shadow-lg shadow-blue-500/20"
+          (click)="openDialog()"
         >
           <mat-icon class="mr-2">add</mat-icon> Nuevo Usuario
         </button>
@@ -66,7 +70,7 @@ import { AdminRepository, User } from '../../../core/repositories/admin.reposito
                 </td>
                 <td class="p-4">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                     {{ user.rolNombre }}
+                     {{ user.rolNombre || 'Sin Rol' }}
                   </span>
                 </td>
                 <td class="p-4">
@@ -82,10 +86,10 @@ import { AdminRepository, User } from '../../../core/repositories/admin.reposito
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar">
+                    <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar" (click)="openDialog(user)">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar">
+                    <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar" (click)="deleteUser(user)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -117,6 +121,7 @@ export class UsersComponent implements OnInit {
   canDelete = false;
 
   constructor(
+    private dialog: MatDialog,
     private permissionService: PermissionService,
     private adminRepository: AdminRepository
   ) { }
@@ -139,7 +144,19 @@ export class UsersComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading users', err);
-        // TODO: Show error notification
+      }
+    });
+  }
+
+  openDialog(user?: User) {
+    const dialogRef = this.dialog.open(UserFormDialogComponent, {
+      width: '500px',
+      data: user || null
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadUsers();
       }
     });
   }
@@ -148,7 +165,7 @@ export class UsersComponent implements OnInit {
     if (confirm(`¿Estás seguro de eliminar a ${user.nombreCompleto}?`)) {
       this.adminRepository.deleteUser(user.id!).subscribe({
         next: () => {
-          this.loadUsers(); // Refresh list
+          this.loadUsers();
         },
         error: (err) => {
           console.error('Error deleting user', err);

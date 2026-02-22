@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AdminRepository, Role } from '../../../core/repositories/admin.repository';
+import { RoleFormDialogComponent } from './role-form-dialog.component';
 
 
 @Component({
@@ -14,7 +16,8 @@ import { AdminRepository, Role } from '../../../core/repositories/admin.reposito
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
@@ -30,6 +33,7 @@ import { AdminRepository, Role } from '../../../core/repositories/admin.reposito
           mat-flat-button 
           class="bg-purple-600 text-white rounded-lg px-6 py-2 shadow-lg shadow-purple-500/20"
           *ngIf="canCreate"
+          (click)="openDialog()"
         >
           <mat-icon class="mr-2">add_moderator</mat-icon> Nuevo Rol
         </button>
@@ -55,18 +59,20 @@ import { AdminRepository, Role } from '../../../core/repositories/admin.reposito
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <!--
-                    <button mat-icon-button class="text-purple-600" *ngIf="canEdit" matTooltip="Editar Permisos">
-                      <mat-icon>lock_open</mat-icon>
-                    </button>
-                    -->
-                     <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar">
+                     <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar" (click)="openDialog(role)">
                       <mat-icon>edit</mat-icon>
                     </button>
                     <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar" (click)="deleteRole(role)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
+                </td>
+              </tr>
+              
+              <tr *ngIf="roles.length === 0">
+                <td colspan="3" class="p-12 text-center text-gray-500">
+                   <mat-icon class="text-4xl mb-2 text-gray-300">security_update_warning</mat-icon>
+                   <p>No hay roles definidos</p>
                 </td>
               </tr>
             </tbody>
@@ -83,6 +89,7 @@ export class RolesComponent implements OnInit {
   canDelete = false;
 
   constructor(
+    private dialog: MatDialog,
     private permissionService: PermissionService,
     private adminRepository: AdminRepository
   ) { }
@@ -94,8 +101,6 @@ export class RolesComponent implements OnInit {
 
   checkPermissions() {
     this.canCreate = this.permissionService.hasPermission('roles:crear');
-    // this.canEdit = this.permissionService.hasPermission('roles:actualizar');
-    // Assuming update permission serves for both editing and managing permissions for now
     this.canEdit = this.permissionService.hasPermission('roles:actualizar');
     this.canDelete = this.permissionService.hasPermission('roles:eliminar');
   }
@@ -107,6 +112,19 @@ export class RolesComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading roles', err);
+      }
+    });
+  }
+
+  openDialog(role?: Role) {
+    const dialogRef = this.dialog.open(RoleFormDialogComponent, {
+      width: '500px',
+      data: role || null
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadRoles();
       }
     });
   }
