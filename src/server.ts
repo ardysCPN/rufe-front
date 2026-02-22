@@ -17,8 +17,39 @@ const angularApp = new AngularNodeAppEngine();
  */
 app.get('/api/config', (req, res) => {
   res.json({
-    apiUrl: process.env['API_URL'] || 'http://localhost:8080'
+    apiUrl: process.env['API_URL'] || '/proxy-api'
   });
+});
+
+/**
+ * Proxy API requests to the internal backend service.
+ * This allows the backend to remain private within the Docker network.
+ */
+app.all('/proxy-api/*', async (req, res) => {
+  const backendUrl = process.env['INTERNAL_BACKEND_URL'] || 'http://backend:8080';
+  const targetPath = req.url.replace('/proxy-api', '');
+  const targetUrl = `${backendUrl}${targetPath}`;
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers: {
+        'content-type': String(req.headers['content-type'] || 'application/json'),
+        'authorization': String(req.headers['authorization'] || ''),
+        'x-tenant-id': String(req.headers['x-tenant-id'] || ''),
+        'accept': String(req.headers['accept'] || '*/*'),
+      },
+      body: (req.method !== 'GET' && req.method !== 'HEAD') ? JSON.stringify(req.body) : undefined,
+    });
+
+    const data = await response.arrayBuffer();
+    res.status(response.status);
+    response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.send(Buffer.from(data));
+  } catch (error) {
+    console.error('Proxy Error:', error);
+    res.status(502).json({ error: 'Proxy Error', detail: 'Internal backend unreachable' });
+  }
 });
 
 /**
