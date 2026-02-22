@@ -12,6 +12,9 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+// Add body-parser middleware for the proxy to work with POST/PUT requests
+app.use(express.json());
+
 /**
  * Serve environment configuration for the client.
  */
@@ -24,11 +27,12 @@ app.get('/api/config', (req, res) => {
 /**
  * Proxy API requests to the internal backend service.
  * This allows the backend to remain private within the Docker network.
+ * Using app.use() instead of app.all() with wildcards to avoid Express 5 routing issues.
  */
-app.all('/proxy-api/:path*', async (req, res) => {
+app.use('/proxy-api', async (req, res) => {
   const backendUrl = process.env['INTERNAL_BACKEND_URL'] || 'http://backend:8080';
-  const targetPath = req.url.replace('/proxy-api', '');
-  const targetUrl = `${backendUrl}${targetPath}`;
+  // With app.use('/proxy-api'), req.url is already stripped of the prefix.
+  const targetUrl = `${backendUrl}${req.url}`;
 
   try {
     const response = await fetch(targetUrl, {
