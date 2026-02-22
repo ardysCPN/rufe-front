@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -25,17 +25,17 @@ import { CatalogFormDialogComponent } from './catalog-form-dialog.component';
     MatTooltipModule
   ],
   template: `
-    <div class="p-8 animate-fade-in-up bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-950 dark:to-gray-900 min-h-screen">
+    <div class="p-8 animate-fade-in-up min-h-screen bg-gradient-to-br from-gray-50/50 to-orange-50/30 dark:from-transparent dark:to-transparent">
       <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
             Configuración de Catálogos
           </h1>
-          <p class="text-gray-500 mt-1">Gestión de datos paramétricos del sistema RUFE</p>
+          <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium italic">Gestión de datos paramétricos del sistema RUFE</p>
         </div>
       </div>
 
-      <div class="bg-white/70 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-gray-800">
+      <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
         <mat-tab-group animationDuration="500ms" class="custom-tabs">
           
           <mat-tab *ngFor="let cat of catalogosDef" [label]="cat.label">
@@ -111,7 +111,8 @@ export class CatalogManagementComponent implements OnInit {
   constructor(
     private catalogRepo: CatalogRepository,
     private dialog: MatDialog,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -140,11 +141,13 @@ export class CatalogManagementComponent implements OnInit {
 
   openDialog(cat: any, item?: any) {
     const dialogRef = this.dialog.open(CatalogFormDialogComponent, {
-      width: '450px',
+      width: '100%',
+      maxWidth: '450px',
       data: {
         title: `${item ? 'Editar' : 'Nuevo'} ${cat.label.slice(0, -1)}`,
         item: item
-      }
+      },
+      panelClass: 'glass-dialog'
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -163,6 +166,7 @@ export class CatalogManagementComponent implements OnInit {
         });
       }
     });
+    this.cdr.detectChanges();
   }
 
   deleteItem(cat: any, item: any) {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,26 +20,26 @@ import { RoleFormDialogComponent } from './role-form-dialog.component';
     MatDialogModule
   ],
   template: `
-    <div class="p-8 animate-fade-in-up">
+    <div class="p-8 animate-fade-in-up min-h-screen bg-gradient-to-br from-gray-50/50 to-purple-50/30 dark:from-transparent dark:to-transparent">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-           <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+           <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
              Roles y Permisos
            </h1>
-           <p class="text-gray-500 dark:text-gray-400 mt-1">Define los roles y asigna capacidades</p>
+           <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium italic">Define los roles y asigna capacidades</p>
         </div>
         
         <button 
           mat-flat-button 
-          class="bg-purple-600 text-white rounded-lg px-6 py-2 shadow-lg shadow-purple-500/20"
+          class="bg-purple-600 text-white rounded-xl px-6 py-2 shadow-lg shadow-purple-500/30 hover:scale-105 transition-transform"
           *ngIf="canCreate"
           (click)="openDialog()"
         >
-          <mat-icon class="mr-2">add_moderator</mat-icon> Nuevo Rol
+          <mat-icon class="mr-2">security</mat-icon> Nuevo Rol
         </button>
       </div>
 
-      <div class="bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
@@ -91,7 +91,8 @@ export class RolesComponent implements OnInit {
   constructor(
     private dialog: MatDialog,
     private permissionService: PermissionService,
-    private adminRepository: AdminRepository
+    private adminRepository: AdminRepository,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -118,8 +119,10 @@ export class RolesComponent implements OnInit {
 
   openDialog(role?: Role) {
     const dialogRef = this.dialog.open(RoleFormDialogComponent, {
-      width: '500px',
-      data: role || null
+      width: '100%',
+      maxWidth: '500px',
+      data: role || null,
+      panelClass: 'glass-dialog'
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -127,6 +130,7 @@ export class RolesComponent implements OnInit {
         this.loadRoles();
       }
     });
+    this.cdr.detectChanges();
   }
 
   deleteRole(role: Role) {

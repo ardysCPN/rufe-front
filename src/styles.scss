@@ -44,6 +44,28 @@
     width: 100%;
 }
 
+/* Material Tab Pagination Arrows (Contrast Fix) */
+.mat-mdc-tab-header-pagination-controls {
+    color: #4b5563 !important;
+    /* gray-600 */
+}
+
+.dark .mat-mdc-tab-header-pagination-controls {
+    color: #e5e7eb !important;
+    /* gray-200 */
+}
+
+/* Ensure contrast for interactive elements in Light Mode */
+.mat-mdc-button,
+.mat-mdc-icon-button {
+    --mdc-icon-button-icon-color: inherit;
+}
+
+body:not(.dark) {
+    color: #111827;
+    /* gray-900 */
+}
+
 /* Animations */
 @keyframes fadeInUp {
     from {

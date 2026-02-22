@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,29 +22,28 @@ import { UserFormDialogComponent } from './user-form-dialog.component';
     MatDialogModule
   ],
   template: `
-    <div class="p-8 animate-fade-in-up">
+    <div class="p-8 animate-fade-in-up min-h-screen bg-gradient-to-br from-gray-50/50 to-indigo-50/30 dark:from-transparent dark:to-transparent">
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-           <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+           <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
              Gestión de Usuarios
            </h1>
-           <p class="text-gray-500 dark:text-gray-400 mt-1">Administra los accesos y roles de tu organización</p>
+           <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium italic">Administra los accesos y roles de tu organización</p>
         </div>
         
         <button 
           mat-flat-button 
-          color="primary" 
           *ngIf="canCreate"
-          class="rounded-lg px-6 py-2 shadow-lg shadow-blue-500/20"
+          class="bg-indigo-600 text-white rounded-xl px-6 py-2 shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform"
           (click)="openDialog()"
         >
-          <mat-icon class="mr-2">add</mat-icon> Nuevo Usuario
+          <mat-icon class="mr-2">person_add</mat-icon> Nuevo Usuario
         </button>
       </div>
 
       <!-- Table Card -->
-      <div class="bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
@@ -123,7 +122,8 @@ export class UsersComponent implements OnInit {
   constructor(
     private dialog: MatDialog,
     private permissionService: PermissionService,
-    private adminRepository: AdminRepository
+    private adminRepository: AdminRepository,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -150,8 +150,10 @@ export class UsersComponent implements OnInit {
 
   openDialog(user?: User) {
     const dialogRef = this.dialog.open(UserFormDialogComponent, {
-      width: '500px',
-      data: user || null
+      width: '100%',
+      maxWidth: '550px',
+      data: user || null,
+      panelClass: 'glass-dialog'
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -159,6 +161,7 @@ export class UsersComponent implements OnInit {
         this.loadUsers();
       }
     });
+    this.cdr.detectChanges();
   }
 
   deleteUser(user: User) {

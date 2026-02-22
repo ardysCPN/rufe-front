@@ -6,26 +6,26 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminRepository, AuditLog } from '../../../core/repositories/admin.repository';
 
 @Component({
-   selector: 'app-audit-logs',
-   standalone: true,
-   imports: [CommonModule, MatTableModule, MatIconModule, MatTooltipModule],
-   template: `
-    <div class="p-8 animate-fade-in-up bg-gradient-to-br from-gray-50 to-indigo-50 dark:from-gray-950 dark:to-gray-900 min-h-screen">
+  selector: 'app-audit-logs',
+  standalone: true,
+  imports: [CommonModule, MatTableModule, MatIconModule, MatTooltipModule],
+  template: `
+    <div class="p-8 animate-fade-in-up min-h-screen bg-gradient-to-br from-gray-50/50 to-emerald-50/20 dark:from-transparent dark:to-transparent">
       <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-           <h1 class="text-3xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">
+           <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
              Logs de Auditoría
            </h1>
-           <p class="text-gray-500 dark:text-gray-400 mt-1">Seguimiento de acciones y cambios realizados en la plataforma</p>
+           <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium italic">Seguimiento de acciones y cambios realizados en la plataforma</p>
         </div>
-        <div class="bg-white/50 dark:bg-emerald-900/20 backdrop-blur-md px-4 py-2 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 flex items-center gap-2 shadow-sm">
-           <mat-icon>verified_user</mat-icon>
-           <span class="font-bold">Cumplimiento al día</span>
+        <div class="bg-white/80 dark:bg-emerald-900/40 backdrop-blur-xl px-5 py-2.5 rounded-2xl text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800 flex items-center gap-3 shadow-xl">
+           <mat-icon class="scale-110">verified_user</mat-icon>
+           <span class="font-bold tracking-tight text-sm">Cumplimiento al día</span>
         </div>
       </div>
 
       <!-- Glass Table Card -->
-      <div class="bg-white/70 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
+      <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
@@ -78,36 +78,36 @@ import { AdminRepository, AuditLog } from '../../../core/repositories/admin.repo
       </div>
     </div>
   `,
-   styles: [`
+  styles: [`
     :host { display: block; }
   `]
 })
 export class AuditLogsComponent implements OnInit {
-   logs: AuditLog[] = [];
+  logs: AuditLog[] = [];
 
-   constructor(private adminRepo: AdminRepository) { }
+  constructor(private adminRepo: AdminRepository) { }
 
-   ngOnInit(): void {
-      this.loadLogs();
-   }
+  ngOnInit(): void {
+    this.loadLogs();
+  }
 
-   loadLogs() {
-      this.adminRepo.getAuditLogs().subscribe({
-         next: (data) => this.logs = data,
-         error: (err) => console.error('Error loading audit logs', err)
-      });
-   }
+  loadLogs() {
+    this.adminRepo.getAuditLogs().subscribe({
+      next: (data) => this.logs = data,
+      error: (err) => console.error('Error loading audit logs', err)
+    });
+  }
 
-   formatDate(dateStr: string) {
-      return new Date(dateStr).toLocaleString();
-   }
+  formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleString();
+  }
 
-   getActionClass(accion: string): string {
-      const a = accion.toUpperCase();
-      if (a.includes('CREATE')) return 'text-emerald-600';
-      if (a.includes('UPDATE')) return 'text-blue-600';
-      if (a.includes('DELETE')) return 'text-red-500';
-      if (a.includes('LOGIN')) return 'text-indigo-600';
-      return 'text-gray-600';
-   }
+  getActionClass(accion: string): string {
+    const a = accion.toUpperCase();
+    if (a.includes('CREATE')) return 'text-emerald-600';
+    if (a.includes('UPDATE')) return 'text-blue-600';
+    if (a.includes('DELETE')) return 'text-red-500';
+    if (a.includes('LOGIN')) return 'text-indigo-600';
+    return 'text-gray-600';
+  }
 }
