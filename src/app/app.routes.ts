@@ -56,7 +56,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin/organizations',
-        loadComponent: () => import('./features/admin/organizations/organization-management/organization-management.component').then(m => m.OrganizationManagementComponent)
+        loadComponent: () => import('./features/admin/organizations/organizations.component').then(m => m.OrganizationsComponent)
       },
       {
         path: 'admin/catalogs',
@@ -74,9 +74,7 @@ export const routes: Routes = [
       {
         path: 'tools/sync-status',
         loadComponent: () => import('./features/tools/sync-status/sync-status.component').then(m => m.SyncStatusComponent)
-      },
-      // Fallback for any path within the protected area that doesn't match
-      { path: '**', redirectTo: '/dashboard' } // Redirect to dashboard if in protected area and path not found
+      }
     ]
   },
 

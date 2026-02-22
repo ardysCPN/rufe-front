@@ -2,10 +2,9 @@ import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
 import { AdminRepository, Role } from '../../../core/repositories/admin.repository';
+import { InputComponent } from '../../../shared/components/input/input.component';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-role-form-dialog',
@@ -14,46 +13,52 @@ import { AdminRepository, Role } from '../../../core/repositories/admin.reposito
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule
+    InputComponent,
+    ButtonComponent
   ],
   template: `
-    <div class="glass-dialog p-6 min-w-[400px]">
-      <h2 mat-dialog-title class="text-2xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 w-full max-w-lg mx-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
         {{ data ? 'Editar Rol' : 'Nuevo Rol' }}
       </h2>
       
       <form [formGroup]="roleForm" (ngSubmit)="onSubmit()">
-        <mat-dialog-content class="flex flex-col gap-4">
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Nombre del Rol</mat-label>
-            <input matInput formControlName="nombreRol" placeholder="Ej. COORDINADOR_ZONAL">
-            <mat-error *ngIf="roleForm.get('nombreRol')?.hasError('required')">El nombre es obligatorio</mat-error>
-          </mat-form-field>
+        <mat-dialog-content class="flex flex-col gap-6 !p-0 overflow-visible mt-4">
+          <app-input 
+            label="Nombre del Rol" 
+            id="nombreRol" 
+            name="nombreRol" 
+            formControlName="nombreRol" 
+            [required]="true"
+            placeholder="Ej. COORDINADOR_ZONAL">
+          </app-input>
 
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Descripción</mat-label>
-            <textarea matInput formControlName="descripcion" rows="3" placeholder="Descripción detallada del rol"></textarea>
-          </mat-form-field>
+          <div class="flex flex-col gap-2">
+            <label class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200">
+              Descripción
+            </label>
+            <textarea 
+              formControlName="descripcion" 
+              rows="3" 
+              class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:focus:ring-indigo-500"
+              placeholder="Descripción detallada del rol">
+            </textarea>
+          </div>
         </mat-dialog-content>
 
-        <mat-dialog-actions align="end" class="mt-6 gap-2">
-          <button mat-button (click)="onCancel()" type="button" class="rounded-lg">Cancelar</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="roleForm.invalid" class="rounded-lg bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+        <mat-dialog-actions align="end" class="mt-8 gap-3 !p-0">
+          <app-button variant="basic" (click)="onCancel()" type="button">
+            Cancelar
+          </app-button>
+          <app-button type="submit" [disabled]="roleForm.invalid" variant="primary" customClasses="px-8">
             {{ data ? 'Actualizar' : 'Crear' }}
-          </button>
+          </app-button>
         </mat-dialog-actions>
       </form>
     </div>
   `,
   styles: [`
-    .glass-dialog {
-      background: rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 20px;
-    }
+    :host { display: block; }
   `]
 })
 export class RoleFormDialogComponent {

@@ -36,7 +36,7 @@ export const appConfig: ApplicationConfig = {
     provideEffects(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000'
+      registrationStrategy: 'registerImmediately'
     }), // Empty for now, will add effects later
     // Add other global providers here like DatabaseService (already providedIn: 'root')
   ]

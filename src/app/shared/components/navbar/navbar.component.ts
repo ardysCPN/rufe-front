@@ -139,7 +139,7 @@ export default class NavbarComponent implements OnInit {
     console.log('Navbar: Logging out...');
     this.authService.logout();
     this.menuOpen = false;
-    this.router.navigate(['/auth/login']);
+    this.router.navigate(['/login']);
   }
 
   async triggerSync() {
