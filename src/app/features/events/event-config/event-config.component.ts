@@ -45,13 +45,13 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
         </div>
 
         <!-- Glass Card -->
-        <div class="bg-white/70 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/20 dark:border-gray-800 animate-fade-in-up">
-          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card rounded-3xl p-6 md:p-10 border border-white/20 dark:border-gray-800 animate-fade-in-up">
+          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             <mat-form-field appearance="outline" class="md:col-span-2">
               <mat-label>Nombre del Evento</mat-label>
               <input matInput formControlName="nombreEvento" placeholder="Ej: Inundación Zona Norte 2026">
-              <mat-icon matPrefix class="mr-2 text-blue-500">campaign</mat-icon>
+              <mat-icon matSuffix class="text-blue-500">campaign</mat-icon>
               <mat-error *ngIf="eventForm.get('nombreEvento')?.hasError('required')">Requerido</mat-error>
             </mat-form-field>
 
@@ -61,7 +61,7 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
                 <mat-option value="REAL">REAL</mat-option>
                 <mat-option value="SIMULACRO">SIMULACRO</mat-option>
               </mat-select>
-              <mat-icon matPrefix class="mr-2 text-indigo-500">category</mat-icon>
+              <mat-icon matSuffix class="text-indigo-500">category</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -69,7 +69,7 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
               <input matInput [matDatepicker]="picker" formControlName="fechaEvento">
               <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
               <mat-datepicker #picker></mat-datepicker>
-              <mat-icon matPrefix class="mr-2 text-purple-500">event</mat-icon>
+              <mat-icon matSuffix class="text-purple-500 mr-2">event</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -79,7 +79,7 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
                   {{ depto.nombre }}
                 </mat-option>
               </mat-select>
-              <mat-icon matPrefix class="mr-2 text-emerald-500">map</mat-icon>
+              <mat-icon matSuffix class="text-emerald-500">map</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -89,19 +89,20 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
                   {{ muni.nombre }}
                 </mat-option>
               </mat-select>
-              <mat-icon matPrefix class="mr-2 text-teal-500">location_on</mat-icon>
+              <mat-icon matSuffix class="text-teal-500">location_on</mat-icon>
               <mat-hint *ngIf="!eventForm.get('departamento')?.value">Seleccione primero un departamento</mat-hint>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="md:col-span-2">
               <mat-label>Descripción / Observaciones</mat-label>
               <textarea matInput formControlName="descripcion" rows="4"></textarea>
-              <mat-icon matPrefix class="mr-2 text-gray-400">notes</mat-icon>
+              <mat-icon matSuffix class="text-gray-400">notes</mat-icon>
             </mat-form-field>
 
             <div class="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button mat-button type="button" (click)="goBack()" class="px-6 rounded-xl">Cancelar</button>
-              <button mat-flat-button color="primary" [disabled]="eventForm.invalid" class="px-10 py-2 rounded-xl shadow-lg shadow-blue-500/30">
+              <button mat-button type="button" (click)="goBack()" class="px-8 rounded-xl font-medium">Cancelar</button>
+              <button mat-flat-button color="primary" [disabled]="eventForm.invalid" 
+                      class="px-12 py-2 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02]">
                  Guardar Configuración
               </button>
             </div>

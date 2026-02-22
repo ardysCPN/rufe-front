@@ -16,7 +16,8 @@ import { OrganizationFormDialogComponent } from './organization-form-dialog.comp
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    OrganizationFormDialogComponent
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
