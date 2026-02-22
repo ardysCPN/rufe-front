@@ -2,12 +2,11 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AdminRepository, User, Role } from '../../../core/repositories/admin.repository';
+import { InputComponent } from '../../../shared/components/input/input.component';
+import { SelectComponent } from '../../../shared/components/select/select.component';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
+import { ICatalogoItemResponse } from '../../../models/catalogs.model';
 
 @Component({
   selector: 'app-user-form-dialog',
@@ -16,65 +15,69 @@ import { AdminRepository, User, Role } from '../../../core/repositories/admin.re
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatSlideToggleModule
+    InputComponent,
+    SelectComponent,
+    ButtonComponent
   ],
   template: `
-    <div class="glass-card p-8 min-w-[450px] rounded-3xl border border-white/20">
-      <h2 mat-dialog-title class="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+    <div class="bg-white dark:bg-gray-800 p-8 min-w-[450px] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
         {{ data ? 'Editar Usuario' : 'Nuevo Usuario' }}
       </h2>
       
       <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
-        <mat-dialog-content class="flex flex-col gap-6 !p-0 overflow-visible">
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre Completo</mat-label>
-            <input matInput formControlName="nombreCompleto" placeholder="Ej. Juan Pérez">
-            <mat-icon matSuffix class="text-blue-500">person</mat-icon>
-            <mat-error *ngIf="userForm.get('nombreCompleto')?.hasError('required')">El nombre es obligatorio</mat-error>
-          </mat-form-field>
+        <mat-dialog-content class="flex flex-col gap-6 !p-0 overflow-visible mt-4">
+          <app-input 
+            label="Nombre Completo" 
+            id="nombreCompleto" 
+            name="nombreCompleto" 
+            formControlName="nombreCompleto" 
+            [required]="true"
+            placeholder="Ej. Juan Pérez">
+          </app-input>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Correo Electrónico</mat-label>
-            <input matInput formControlName="email" type="email" placeholder="email@ejemplo.com">
-            <mat-icon matSuffix class="text-indigo-500">email</mat-icon>
-            <mat-error *ngIf="userForm.get('email')?.hasError('required')">El correo es obligatorio</mat-error>
-            <mat-error *ngIf="userForm.get('email')?.hasError('email')">Correo inválido</mat-error>
-          </mat-form-field>
+          <app-input 
+            label="Correo Electrónico" 
+            id="email" 
+            name="email" 
+            type="email"
+            formControlName="email" 
+            [required]="true"
+            placeholder="email@ejemplo.com">
+          </app-input>
 
-          <mat-form-field appearance="outline" *ngIf="!data">
-            <mat-label>Contraseña</mat-label>
-            <input matInput formControlName="password" type="password">
-            <mat-icon matSuffix class="text-purple-500">lock</mat-icon>
-            <mat-error *ngIf="userForm.get('password')?.hasError('required')">La contraseña es obligatoria</mat-error>
-          </mat-form-field>
+          <app-input 
+            *ngIf="!data"
+            label="Contraseña" 
+            id="password" 
+            name="password" 
+            type="password"
+            formControlName="password" 
+            [required]="true">
+          </app-input>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Rol</mat-label>
-            <mat-select formControlName="rolId">
-              <mat-option *ngFor="let rol of roles" [value]="rol.id">
-                {{ rol.nombreRol }}
-              </mat-option>
-            </mat-select>
-            <mat-icon matSuffix class="text-emerald-500">admin_panel_settings</mat-icon>
-            <mat-error *ngIf="userForm.get('rolId')?.hasError('required')">El rol es obligatorio</mat-error>
-          </mat-form-field>
+          <app-select 
+            label="Rol" 
+            id="rolId" 
+            name="rolId" 
+            [options]="rolesForSelect"
+            formControlName="rolId" 
+            [required]="true">
+          </app-select>
 
-          <div class="py-2 flex items-center justify-between bg-blue-50/30 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100/20">
+          <div class="py-4 px-4 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Usuario Activo</span>
-            <mat-slide-toggle formControlName="activo" color="primary"></mat-slide-toggle>
+            <input type="checkbox" formControlName="activo" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
           </div>
         </mat-dialog-content>
 
         <mat-dialog-actions align="end" class="mt-8 gap-3 !p-0">
-          <button mat-button (click)="onCancel()" type="button" class="px-6 rounded-xl font-medium">Cancelar</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="userForm.invalid" 
-                  class="px-10 py-2 rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20 font-bold transition-all hover:scale-[1.02]">
+          <app-button variant="basic" (click)="onCancel()" type="button">
+            Cancelar
+          </app-button>
+          <app-button type="submit" [disabled]="userForm.invalid" variant="primary" customClasses="px-8">
             {{ data ? 'Actualizar' : 'Crear' }}
-          </button>
+          </app-button>
         </mat-dialog-actions>
       </form>
     </div>
@@ -86,6 +89,7 @@ import { AdminRepository, User, Role } from '../../../core/repositories/admin.re
 export class UserFormDialogComponent implements OnInit {
   userForm: FormGroup;
   roles: Role[] = [];
+  rolesForSelect: ICatalogoItemResponse[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -108,7 +112,10 @@ export class UserFormDialogComponent implements OnInit {
 
   loadRoles() {
     this.adminRepository.getRoles().subscribe({
-      next: (data) => this.roles = data,
+      next: (data) => {
+        this.roles = data;
+        this.rolesForSelect = data.map(r => ({ id: r.id!, nombre: r.nombreRol }));
+      },
       error: (err) => console.error('Error loading roles', err)
     });
   }

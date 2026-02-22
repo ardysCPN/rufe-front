@@ -11,7 +11,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { EventosRepository } from '../../../core/repositories/eventos.repository';
 import { CatalogRepository } from '../../../core/repositories/catalog.repository';
-import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catalogs.model';
+import { ICatalogoDepartamento, ICatalogoMunicipio, ICatalogoItemResponse } from '../../../models/catalogs.model';
+import { InputComponent } from '../../../shared/components/input/input.component';
+import { SelectComponent } from '../../../shared/components/select/select.component';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-event-config',
@@ -19,104 +22,120 @@ import { ICatalogoDepartamento, ICatalogoMunicipio } from '../../../models/catal
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatIconModule
+    InputComponent,
+    SelectComponent,
+    ButtonComponent
   ],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-950 dark:to-blue-950 p-4 md:p-8 animate-fade-in">
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 md:p-8">
       <div class="max-w-4xl mx-auto">
         
         <!-- Header -->
-        <div class="mb-8 flex items-center gap-4">
-          <button mat-icon-button (click)="goBack()" class="bg-white/50 dark:bg-gray-800/50 backdrop-blur-md shadow-sm">
-             <mat-icon>arrow_back</mat-icon>
-          </button>
-          <div>
-             <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-               Configurar Nuevo Evento
-             </h1>
-             <p class="text-gray-500 dark:text-gray-400">Define los detalles del evento o emergencia</p>
+        <div class="mb-8 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button (click)="goBack()" class="p-2 rounded-full bg-white dark:bg-gray-800 shadow hover:bg-gray-100 transition-colors">
+              <span class="text-xl">←</span>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                Configurar Nuevo Evento
+              </h1>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Define los detalles del evento o emergencia</p>
+            </div>
           </div>
         </div>
 
-        <!-- Glass Card -->
-        <div class="glass-card rounded-3xl p-6 md:p-10 border border-white/20 dark:border-gray-800 animate-fade-in-up">
-          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Form Card (Matching RUFE style) -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 md:p-10 animate-fade-in-up">
+          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="space-y-8">
             
-            <mat-form-field appearance="outline" class="md:col-span-2">
-              <mat-label>Nombre del Evento</mat-label>
-              <input matInput formControlName="nombreEvento" placeholder="Ej: Inundación Zona Norte 2026">
-              <mat-icon matSuffix class="text-blue-500">campaign</mat-icon>
-              <mat-error *ngIf="eventForm.get('nombreEvento')?.hasError('required')">Requerido</mat-error>
-            </mat-form-field>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="md:col-span-2">
+                <app-input 
+                  label="Nombre del Evento" 
+                  id="nombreEvento" 
+                  name="nombreEvento" 
+                  formControlName="nombreEvento" 
+                  [required]="true"
+                  placeholder="Ej: Inundación Zona Norte 2026">
+                </app-input>
+              </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Tipo de Evento</mat-label>
-              <mat-select formControlName="tipoEvento">
-                <mat-option value="REAL">REAL</mat-option>
-                <mat-option value="SIMULACRO">SIMULACRO</mat-option>
-              </mat-select>
-              <mat-icon matSuffix class="text-indigo-500">category</mat-icon>
-            </mat-form-field>
+              <app-select 
+                label="Tipo de Evento" 
+                id="tipoEvento" 
+                name="tipoEvento" 
+                [options]="tiposEvento"
+                formControlName="tipoEvento" 
+                [required]="true">
+              </app-select>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Fecha del Evento</mat-label>
-              <input matInput [matDatepicker]="picker" formControlName="fechaEvento">
-              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-              <mat-datepicker #picker></mat-datepicker>
-              <mat-icon matSuffix class="text-purple-500 mr-2">event</mat-icon>
-            </mat-form-field>
+              <app-input 
+                label="Fecha del Evento" 
+                id="fechaEvento" 
+                name="fechaEvento" 
+                type="date"
+                formControlName="fechaEvento" 
+                [required]="true">
+              </app-input>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Departamento</mat-label>
-              <mat-select formControlName="departamento" (selectionChange)="onDeptoChange($event.value)">
-                <mat-option *ngFor="let depto of departamentos" [value]="depto.nombre">
-                  {{ depto.nombre }}
-                </mat-option>
-              </mat-select>
-              <mat-icon matSuffix class="text-emerald-500">map</mat-icon>
-            </mat-form-field>
+              <app-select 
+                label="Departamento" 
+                id="departamento" 
+                name="departamento" 
+                [options]="departamentosForSelect"
+                formControlName="departamento" 
+                [required]="true">
+              </app-select>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Municipio</mat-label>
-              <mat-select formControlName="municipio">
-                <mat-option *ngFor="let muni of municipiosFiltered" [value]="muni.nombre">
-                  {{ muni.nombre }}
-                </mat-option>
-              </mat-select>
-              <mat-icon matSuffix class="text-teal-500">location_on</mat-icon>
-              <mat-hint *ngIf="!eventForm.get('departamento')?.value">Seleccione primero un departamento</mat-hint>
-            </mat-form-field>
+              <app-select 
+                label="Municipio" 
+                id="municipio" 
+                name="municipio" 
+                [options]="municipiosFilteredForSelect"
+                formControlName="municipio" 
+                [required]="true">
+              </app-select>
 
-            <mat-form-field appearance="outline" class="md:col-span-2">
-              <mat-label>Descripción / Observaciones</mat-label>
-              <textarea matInput formControlName="descripcion" rows="4"></textarea>
-              <mat-icon matSuffix class="text-gray-400">notes</mat-icon>
-            </mat-form-field>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200 mb-2">
+                  Descripción / Observaciones
+                </label>
+                <textarea 
+                  formControlName="descripcion" 
+                  rows="4"
+                  class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:focus:ring-indigo-500">
+                </textarea>
+              </div>
+            </div>
 
-            <div class="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button mat-button type="button" (click)="goBack()" class="px-8 rounded-xl font-medium">Cancelar</button>
-              <button mat-flat-button color="primary" [disabled]="eventForm.invalid" 
-                      class="px-12 py-2 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02]">
-                 Guardar Configuración
-              </button>
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+              <app-button variant="basic" (click)="goBack()">
+                Cancelar
+              </app-button>
+              <app-button type="submit" [disabled]="eventForm.invalid" variant="primary" customClasses="px-8">
+                Guardar Configuración
+              </app-button>
             </div>
           </form>
         </div>
       </div>
     </div>
-  `
+  `,
 })
 export class EventConfigComponent implements OnInit {
   eventForm: FormGroup;
   departamentos: ICatalogoDepartamento[] = [];
   municipiosFiltered: ICatalogoMunicipio[] = [];
   allMunicipios: ICatalogoMunicipio[] = [];
+
+  // Adapter properties for app-select
+  tiposEvento: ICatalogoItemResponse[] = [
+    { id: 1, nombre: 'REAL' },
+    { id: 2, nombre: 'SIMULACRO' }
+  ];
+  departamentosForSelect: ICatalogoItemResponse[] = [];
+  municipiosFilteredForSelect: ICatalogoItemResponse[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -126,11 +145,16 @@ export class EventConfigComponent implements OnInit {
   ) {
     this.eventForm = this.fb.group({
       nombreEvento: ['', Validators.required],
-      tipoEvento: ['REAL', Validators.required],
-      fechaEvento: [new Date(), Validators.required],
-      departamento: ['', Validators.required],
-      municipio: ['', Validators.required],
+      tipoEvento: [1, Validators.required], // Using ID instead of string
+      fechaEvento: [new Date().toISOString().split('T')[0], Validators.required], // HTML Date format
+      departamento: [null, Validators.required],
+      municipio: [null, Validators.required],
       descripcion: ['']
+    });
+
+    // Handle department change for select
+    this.eventForm.get('departamento')?.valueChanges.subscribe(id => {
+      this.onDeptoChange(id);
     });
   }
 
@@ -141,19 +165,41 @@ export class EventConfigComponent implements OnInit {
   async loadCatalogs() {
     this.departamentos = await this.catalogRepo.getAllDepartamentos();
     this.allMunicipios = await this.catalogRepo.getAllMunicipios();
+
+    this.departamentosForSelect = this.departamentos.map(d => ({
+      id: d.id,
+      nombre: d.nombre
+    }));
   }
 
-  onDeptoChange(deptoNombre: string) {
-    const depto = this.departamentos.find(d => d.nombre === deptoNombre);
-    if (depto) {
-      this.municipiosFiltered = this.allMunicipios.filter(m => m.departamentoId === depto.id);
-      this.eventForm.patchValue({ municipio: '' });
+  onDeptoChange(deptoId: number) {
+    if (deptoId) {
+      this.municipiosFiltered = this.allMunicipios.filter(m => m.departamentoId === deptoId);
+      this.municipiosFilteredForSelect = this.municipiosFiltered.map(m => ({
+        id: m.id,
+        nombre: m.nombre
+      }));
+      this.eventForm.patchValue({ municipio: null });
     }
   }
 
   onSubmit() {
     if (this.eventForm.valid) {
-      this.repo.create(this.eventForm.value).subscribe(() => {
+      const formVal = this.eventForm.getRawValue();
+
+      // Map IDs back to what the backend/repo expects (strings if needed)
+      const depto = this.departamentos.find(d => d.id === formVal.departamento);
+      const muni = this.allMunicipios.find(m => m.id === formVal.municipio);
+      const tipo = this.tiposEvento.find(t => t.id === formVal.tipoEvento);
+
+      const payload = {
+        ...formVal,
+        tipoEvento: tipo?.nombre || 'REAL',
+        departamento: depto?.nombre || '',
+        municipio: muni?.nombre || ''
+      };
+
+      this.repo.create(payload).subscribe(() => {
         this.router.navigate(['/events/list']);
       });
     }

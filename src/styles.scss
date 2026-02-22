@@ -5,66 +5,55 @@
 @tailwind utilities;
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
 .dark {
-  --glass-bg: rgba(15, 23, 42, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.05);
 }
 
 .glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-
-/* Premium Material Form Field Overrides */
-.mat-mdc-form-field {
-  --mdc-filled-tonal-container-color: transparent !important;
-  width: 100%;
-}
-
-.mat-mdc-text-field-wrapper {
-  background-color: rgba(255, 255, 255, 0.4) !important;
-  backdrop-filter: blur(4px) !important;
-  border-radius: 12px !important;
-  transition: all 0.3s ease !important;
-}
-
-.dark .mat-mdc-text-field-wrapper {
-  background-color: rgba(30, 41, 59, 0.4) !important;
-}
-
-.mat-mdc-form-field-focus-indicator {
-  display: none;
-}
-
-.mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
-  background-color: rgba(255, 255, 255, 0.6) !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
-}
-
-.dark .mat-mdc-form-field.mat-focused .mat-mdc-text-field-wrapper {
-  background-color: rgba(30, 41, 59, 0.6) !important;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
 }
 
 /* Animations */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Standard scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }

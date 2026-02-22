@@ -2,11 +2,9 @@ import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AdminRepository, Organization } from '../../../core/repositories/admin.repository';
+import { InputComponent } from '../../../shared/components/input/input.component';
+import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-organization-form-dialog',
@@ -15,56 +13,61 @@ import { AdminRepository, Organization } from '../../../core/repositories/admin.
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSlideToggleModule
+    InputComponent,
+    ButtonComponent
   ],
   template: `
-    <div class="glass-card p-8 min-w-[450px] rounded-3xl border border-white/20">
-      <h2 mat-dialog-title class="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+    <div class="bg-white dark:bg-gray-800 p-8 min-w-[450px] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
         {{ data ? 'Editar Organización' : 'Nueva Organización' }}
       </h2>
       
       <form [formGroup]="orgForm" (ngSubmit)="onSubmit()">
-        <mat-dialog-content class="flex flex-col gap-6 !p-0 overflow-visible">
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre de la Organización</mat-label>
-            <input matInput formControlName="nombreOrganizacion" placeholder="Ej. Alcaldía de Quibdó">
-            <mat-icon matSuffix class="text-emerald-500">business</mat-icon>
-            <mat-error *ngIf="orgForm.get('nombreOrganizacion')?.hasError('required')">El nombre es obligatorio</mat-error>
-          </mat-form-field>
+        <mat-dialog-content class="flex flex-col gap-6 !p-0 overflow-visible mt-4">
+          <app-input 
+            label="Nombre de la Organización" 
+            id="nombreOrganizacion" 
+            name="nombreOrganizacion" 
+            formControlName="nombreOrganizacion" 
+            [required]="true"
+            placeholder="Ej. Alcaldía de Quibdó">
+          </app-input>
 
-          <mat-form-field appearance="outline">
-            <mat-label>NIT</mat-label>
-            <input matInput formControlName="nit" placeholder="Ej. 800.123.456-7">
-            <mat-icon matSuffix class="text-teal-500">fingerprint</mat-icon>
-          </mat-form-field>
+          <app-input 
+            label="NIT" 
+            id="nit" 
+            name="nit" 
+            formControlName="nit" 
+            placeholder="Ej. 800.123.456-7">
+          </app-input>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Dirección</mat-label>
-            <input matInput formControlName="direccion">
-            <mat-icon matSuffix class="text-indigo-500">place</mat-icon>
-          </mat-form-field>
+          <app-input 
+            label="Dirección" 
+            id="direccion" 
+            name="direccion" 
+            formControlName="direccion">
+          </app-input>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Teléfono</mat-label>
-            <input matInput formControlName="telefono">
-            <mat-icon matSuffix class="text-blue-500">phone</mat-icon>
-          </mat-form-field>
+          <app-input 
+            label="Teléfono" 
+            id="telefono" 
+            name="telefono" 
+            formControlName="telefono">
+          </app-input>
 
-          <div class="py-2 flex items-center justify-between bg-emerald-50/30 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100/20">
+          <div class="py-4 px-4 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Organización Activa</span>
-            <mat-slide-toggle formControlName="activa" color="primary"></mat-slide-toggle>
+            <input type="checkbox" formControlName="activa" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
           </div>
         </mat-dialog-content>
 
         <mat-dialog-actions align="end" class="mt-8 gap-3 !p-0">
-          <button mat-button (click)="onCancel()" type="button" class="px-6 rounded-xl font-medium">Cancelar</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="orgForm.invalid" 
-                  class="px-10 py-2 rounded-xl bg-emerald-600 shadow-lg shadow-emerald-500/20 font-bold transition-all hover:scale-[1.02]">
+          <app-button variant="basic" (click)="onCancel()" type="button">
+            Cancelar
+          </app-button>
+          <app-button type="submit" [disabled]="orgForm.invalid" variant="primary" customClasses="px-8">
             {{ data ? 'Actualizar' : 'Crear' }}
-          </button>
+          </app-button>
         </mat-dialog-actions>
       </form>
     </div>
