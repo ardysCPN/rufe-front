@@ -23,13 +23,30 @@ import { Subject, filter, takeUntil } from 'rxjs';
     MatSidenavModule // Keep this import even if not directly used for the custom sidebar, as other components might need it.
   ],
   template: `
-    <div class="h-screen flex flex-col">
+    <div class="h-screen flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <app-navbar (toggleSidenav)="toggleSidebar()"></app-navbar>
-      <div class="flex flex-1 overflow-hidden">
-        <app-sidebar [collapsed]="isCollapsed"></app-sidebar>
+      
+      <div class="flex flex-1 overflow-hidden relative">
+        <!-- Sidebar Backdrop (Mobile only) -->
+        <div 
+          *ngIf="!isCollapsed" 
+          (click)="toggleSidebar()" 
+          class="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 md:hidden transition-opacity duration-300"
+        ></div>
+
+        <!-- Sidebar -->
+        <app-sidebar 
+          [collapsed]="isCollapsed"
+          class="fixed md:relative z-30 h-full transition-transform duration-300 ease-in-out md:translate-x-0"
+          [class.-translate-x-full]="isCollapsed"
+          [class.translate-x-0]="!isCollapsed"
+        ></app-sidebar>
         
-        <main class="flex-1 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white overflow-y-auto p-6">
-          <router-outlet></router-outlet>
+        <!-- Main Content -->
+        <main class="flex-1 bg-gray-50 dark:bg-gray-901 overflow-y-auto p-4 md:p-8 transition-all duration-300">
+          <div class="max-w-[1600px] mx-auto">
+            <router-outlet></router-outlet>
+          </div>
         </main>
       </div>
     </div>
@@ -41,15 +58,19 @@ import { Subject, filter, takeUntil } from 'rxjs';
   `]
 })
 export class LayoutComponent implements OnInit, OnDestroy {
-  // @ViewChild('sidenav') sidenav!: MatSidenav; // Removed as you're using a custom sidebar
-  isCollapsed = false; // For your custom sidebar collapse logic
+  isCollapsed = false;
   private destroy$ = new Subject<void>();
 
   constructor(
     private authService: AuthService,
     private menuService: MenuService,
     private networkService: NetworkService
-  ) { }
+  ) {
+    // Initial collapse state based on screen size
+    if (typeof window !== 'undefined') {
+      this.isCollapsed = window.innerWidth < 768;
+    }
+  }
 
   ngOnInit(): void {
     // Subscribe to currentUser changes to trigger menu loading when user logs in

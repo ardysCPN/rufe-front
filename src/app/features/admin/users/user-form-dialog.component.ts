@@ -20,8 +20,8 @@ import { ICatalogoItemResponse } from '../../../models/catalogs.model';
     ButtonComponent
   ],
   template: `
-    <div class="bg-white dark:bg-gray-800 p-8 min-w-[450px] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
-      <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 w-full max-w-xl mx-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <h2 mat-dialog-title class="text-2xl font-bold mb-4 text-gray-900 dark:text-white !p-0">
         {{ data ? 'Editar Usuario' : 'Nuevo Usuario' }}
       </h2>
       

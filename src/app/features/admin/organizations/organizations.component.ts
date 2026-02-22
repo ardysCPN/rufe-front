@@ -130,9 +130,12 @@ export class OrganizationsComponent implements OnInit {
   }
 
   openDialog(org?: Organization) {
+    console.log('Opening Organization Dialog with data:', org);
     const dialogRef = this.dialog.open(OrganizationFormDialogComponent, {
-      width: '500px',
-      data: org || null
+      width: '100%',
+      maxWidth: '500px',
+      data: org || null,
+      panelClass: 'glass-dialog'
     });
 
     dialogRef.afterClosed().subscribe(result => {

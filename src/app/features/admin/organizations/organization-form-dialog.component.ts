@@ -17,7 +17,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
     ButtonComponent
   ],
   template: `
-    <div class="bg-white dark:bg-gray-800 p-8 min-w-[450px] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 w-full max-w-lg mx-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
       <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
         {{ data ? 'Editar Organización' : 'Nueva Organización' }}
       </h2>
@@ -85,6 +85,7 @@ export class OrganizationFormDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: Organization | null,
     private adminRepository: AdminRepository
   ) {
+    console.log('OrganizationFormDialogComponent initialized with data:', data);
     this.orgForm = this.fb.group({
       nombreOrganizacion: [data?.nombreOrganizacion || '', Validators.required],
       nit: [data?.nit || ''],

@@ -20,10 +20,10 @@ import { IMenuItem } from '../../../core/models/menu.model';
   ],
   template: `
     <aside
-      class="h-full bg-white/80 dark:bg-gray-900/90 backdrop-blur-md shadow-2xl overflow-y-auto transition-all duration-300 border-r border-gray-200 dark:border-gray-800 custom-scrollbar"
+      class="h-full bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto transition-all duration-300 border-r border-gray-200 dark:border-gray-800 custom-scrollbar flex flex-col"
       [ngClass]="{
         'w-72': !collapsed || hovering,
-        'w-20': collapsed && !hovering
+        'w-0 md:w-20': collapsed && !hovering
       }"
       (mouseenter)="onMouseEnter()"
       (mouseleave)="onMouseLeave()"
