@@ -23,6 +23,27 @@
     box-shadow: var(--glass-shadow);
 }
 
+/* Material Dialog Enhancements */
+.cdk-overlay-backdrop {
+    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+.glass-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 24px !important;
+    padding: 0 !important;
+    box-shadow: var(--glass-shadow) !important;
+}
+
+/* Fix for Material form fields in glass cards */
+.mat-mdc-form-field {
+    width: 100%;
+}
+
 /* Animations */
 @keyframes fadeInUp {
     from {

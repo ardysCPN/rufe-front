@@ -1,6 +1,6 @@
 // src/app/shared/components/layout/layout.component.ts
 
-import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import NavbarComponent from '../navbar/navbar.component';
@@ -43,7 +43,7 @@ import { Subject, filter, takeUntil } from 'rxjs';
         ></app-sidebar>
         
         <!-- Main Content -->
-        <main class="flex-1 bg-gray-50 dark:bg-gray-901 overflow-y-auto p-4 md:p-8 transition-all duration-300">
+        <main class="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto p-4 md:p-8 transition-all duration-300">
           <div class="max-w-[1600px] mx-auto">
             <router-outlet></router-outlet>
           </div>
@@ -64,7 +64,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private menuService: MenuService,
-    private networkService: NetworkService
+    private networkService: NetworkService,
+    private cdr: ChangeDetectorRef
   ) {
     // Initial collapse state based on screen size
     if (typeof window !== 'undefined') {
@@ -124,5 +125,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   toggleSidebar() {
     this.isCollapsed = !this.isCollapsed;
+    console.log('Layout: Sidebar is now', this.isCollapsed ? 'collapsed' : 'expanded');
+    this.cdr.detectChanges();
   }
 }
