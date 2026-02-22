@@ -25,7 +25,7 @@ app.get('/api/config', (req, res) => {
  * Proxy API requests to the internal backend service.
  * This allows the backend to remain private within the Docker network.
  */
-app.all('/proxy-api/*', async (req, res) => {
+app.all('/proxy-api/:path*', async (req, res) => {
   const backendUrl = process.env['INTERNAL_BACKEND_URL'] || 'http://backend:8080';
   const targetPath = req.url.replace('/proxy-api', '');
   const targetUrl = `${backendUrl}${targetPath}`;
