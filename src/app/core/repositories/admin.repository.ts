@@ -30,6 +30,17 @@ export interface Organization {
     activa: boolean;
 }
 
+export interface AuditLog {
+    id: number;
+    organizacionId: number;
+    usuarioId: number;
+    accion: string;
+    recurso: string;
+    detalle: string;
+    ipAddress: string;
+    fechaCreacion: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -37,6 +48,11 @@ export class AdminRepository {
     private apiUrl = `${environment.apiUrl}/api`;
 
     constructor(private http: HttpClient) { }
+
+    // --- Audit Logs ---
+    getAuditLogs(): Observable<AuditLog[]> {
+        return this.http.get<AuditLog[]>(`${this.apiUrl}/audit`);
+    }
 
     // --- Users ---
     getUsers(): Observable<User[]> {

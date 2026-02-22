@@ -1,4 +1,7 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { DatabaseService } from '../services/database.service';
 import {
     ICatalogoMunicipio,
@@ -21,7 +24,25 @@ import {
 })
 export class CatalogRepository {
 
-    constructor(private db: DatabaseService) { }
+    constructor(
+        private db: DatabaseService,
+        private http: HttpClient
+    ) { }
+
+    // --- Backend API Methods for CRUD ---
+    public createCatalogItem(catalogo: string, item: { nombre: string }): Observable<any> {
+        return this.http.post(`${environment.apiUrl}/api/catalogos/${catalogo}`, item);
+    }
+
+    public updateCatalogItem(catalogo: string, id: number, item: { nombre: string }): Observable<any> {
+        return this.http.put(`${environment.apiUrl}/api/catalogos/${catalogo}/${id}`, item);
+    }
+
+    public deleteCatalogItem(catalogo: string, id: number): Observable<any> {
+        return this.http.delete(`${environment.apiUrl}/api/catalogos/${catalogo}/${id}`);
+    }
+
+    // --- IndexedDB Methods ---
 
     public async bulkPutMunicipios(municipios: ICatalogoMunicipio[]): Promise<void> {
         try {

@@ -17,8 +17,9 @@ export class PermissionService {
         if (!user || !user.permissions) {
             return false;
         }
-        // Admin global usually has all, or specific wildcard logic could go here.
-        if (user.permissions.includes('ROLE_ADMIN_GLOBAL')) {
+        // Admin roles bypass all granular permission checks
+        const adminRoles = ['ROLE_ADMIN_GLOBAL', 'ADMIN_GLOBAL', 'ROLE_ADMIN', 'ADMIN'];
+        if (user.rolNombre && adminRoles.includes(user.rolNombre)) {
             return true;
         }
         return user.permissions.includes(permission);
@@ -33,7 +34,8 @@ export class PermissionService {
         if (!user || !user.permissions) {
             return false;
         }
-        if (user.permissions.includes('ROLE_ADMIN_GLOBAL')) {
+        const adminRoles = ['ROLE_ADMIN_GLOBAL', 'ADMIN_GLOBAL', 'ROLE_ADMIN', 'ADMIN'];
+        if (user.rolNombre && adminRoles.includes(user.rolNombre)) {
             return true;
         }
         return permissions.some(p => user.permissions.includes(p));
