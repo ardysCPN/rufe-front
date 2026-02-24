@@ -16,8 +16,7 @@ import { OrganizationFormDialogComponent } from './organization-form-dialog.comp
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatDialogModule,
-    OrganizationFormDialogComponent
+    MatDialogModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up min-h-screen bg-gradient-to-br from-gray-50/50 to-emerald-50/30 dark:from-transparent dark:to-transparent">

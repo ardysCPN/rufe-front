@@ -9,16 +9,16 @@ import { IMenuItem } from '../../../core/models/menu.model';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 
 @Component({
-    selector: 'app-role-menu-dialog',
-    standalone: true,
-    imports: [
-        CommonModule,
-        MatDialogModule,
-        MatCheckboxModule,
-        MatProgressSpinnerModule,
-        ButtonComponent
-    ],
-    template: `
+  selector: 'app-role-menu-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatCheckboxModule,
+    MatProgressSpinnerModule,
+    ButtonComponent
+  ],
+  template: `
     <div class="glass-container p-6 max-h-[90vh] flex flex-col overflow-hidden">
       <!-- Header -->
       <div class="mb-6">
@@ -68,7 +68,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
       <!-- Actions -->
       <div class="flex justify-end gap-3 mt-auto pt-4 border-t border-gray-100 dark:border-gray-800">
         <app-button 
-          variant="outline" 
+          variant="basic" 
           (click)="dialogRef.close()"
         >
           Cancelar
@@ -83,7 +83,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .glass-container {
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(10px);
@@ -108,67 +108,67 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
   `]
 })
 export class RoleMenuDialogComponent implements OnInit {
-    allMenus: IMenuItem[] = [];
-    selectedIds: number[] = [];
-    loading = true;
-    saving = false;
+  allMenus: IMenuItem[] = [];
+  selectedIds: number[] = [];
+  loading = true;
+  saving = false;
 
-    constructor(
-        public dialogRef: MatDialogRef<RoleMenuDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: Role,
-        private adminRepo: AdminRepository,
-        private snackBar: MatSnackBar
-    ) { }
+  constructor(
+    public dialogRef: MatDialogRef<RoleMenuDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Role,
+    private adminRepo: AdminRepository,
+    private snackBar: MatSnackBar
+  ) { }
 
-    ngOnInit(): void {
-        this.loadData();
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    if (!this.data.id) return;
+
+    this.loading = true;
+    Promise.all([
+      this.adminRepo.getAllMenus().toPromise(),
+      this.adminRepo.getRoleMenuIds(this.data.id).toPromise()
+    ]).then(([menus, ids]) => {
+      this.allMenus = menus || [];
+      this.selectedIds = ids || [];
+      this.loading = false;
+    }).catch(err => {
+      console.error('Error loading menu data', err);
+      this.snackBar.open('Error al cargar datos del menú', 'Cerrar', { duration: 3000 });
+      this.loading = false;
+    });
+  }
+
+  isMenuSelected(id: number): boolean {
+    return this.selectedIds.includes(id);
+  }
+
+  toggleMenu(id: number): void {
+    const index = this.selectedIds.indexOf(id);
+    if (index > -1) {
+      this.selectedIds.splice(index, 1);
+    } else {
+      this.selectedIds.push(id);
     }
+  }
 
-    loadData(): void {
-        if (!this.data.id) return;
+  save(): void {
+    if (!this.data.id) return;
 
-        this.loading = true;
-        Promise.all([
-            this.adminRepo.getAllMenus().toPromise(),
-            this.adminRepo.getRoleMenuIds(this.data.id).toPromise()
-        ]).then(([menus, ids]) => {
-            this.allMenus = menus || [];
-            this.selectedIds = ids || [];
-            this.loading = false;
-        }).catch(err => {
-            console.error('Error loading menu data', err);
-            this.snackBar.open('Error al cargar datos del menú', 'Cerrar', { duration: 3000 });
-            this.loading = false;
-        });
-    }
-
-    isMenuSelected(id: number): boolean {
-        return this.selectedIds.includes(id);
-    }
-
-    toggleMenu(id: number): void {
-        const index = this.selectedIds.indexOf(id);
-        if (index > -1) {
-            this.selectedIds.splice(index, 1);
-        } else {
-            this.selectedIds.push(id);
-        }
-    }
-
-    save(): void {
-        if (!this.data.id) return;
-
-        this.saving = true;
-        this.adminRepo.updateRoleMenus(this.data.id, this.selectedIds).subscribe({
-            next: () => {
-                this.snackBar.open('Menú actualizado correctamente', 'Cerrar', { duration: 3000 });
-                this.dialogRef.close(true);
-            },
-            error: (err) => {
-                console.error('Error saving menu', err);
-                this.snackBar.open('Error al guardar el menú', 'Cerrar', { duration: 3000 });
-                this.saving = false;
-            }
-        });
-    }
+    this.saving = true;
+    this.adminRepo.updateRoleMenus(this.data.id, this.selectedIds).subscribe({
+      next: () => {
+        this.snackBar.open('Menú actualizado correctamente', 'Cerrar', { duration: 3000 });
+        this.dialogRef.close(true);
+      },
+      error: (err) => {
+        console.error('Error saving menu', err);
+        this.snackBar.open('Error al guardar el menú', 'Cerrar', { duration: 3000 });
+        this.saving = false;
+      }
+    });
+  }
 }
