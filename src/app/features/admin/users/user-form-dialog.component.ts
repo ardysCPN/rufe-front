@@ -129,7 +129,16 @@ export class UserFormDialogComponent implements OnInit {
 
       obs.subscribe({
         next: () => this.dialogRef.close(true),
-        error: (err) => console.error('Error saving user', err)
+        error: (err) => {
+          console.error('Error saving user', err);
+          const message = err.error?.message || 'Error al guardar el usuario';
+          const details = err.error?.details;
+          let detailStr = '';
+          if (details) {
+            detailStr = ':\n' + Object.values(details).join('\n');
+          }
+          alert(message + detailStr); // Using alert as quick fallback, but snackbar is better if available
+        }
       });
     }
   }

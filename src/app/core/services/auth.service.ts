@@ -45,7 +45,7 @@ export class AuthService {
   private isBrowser: boolean;
 
   // Session management properties
-  private readonly INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes of inactivity
+  private readonly INACTIVITY_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours of inactivity
   private inactivityTimer: any;
   private userActivity$ = new Subject<void>();
   private destroy$ = new Subject<void>(); // For unsubscribing from long-lived observables
@@ -170,7 +170,7 @@ export class AuthService {
   }
 
   /**
-   * Validates the current token by making a lightweight API call.
+   * Validates the current token locally.
    * If expired or invalid, forces logout.
    * @returns Observable<boolean> - true if token is valid, false otherwise.
    */
@@ -188,23 +188,9 @@ export class AuthService {
       return of(false);
     }
 
-    // Make a lightweight API call to ensure the session is still active on the backend.
-    return this.http.get<any>(`${environment.apiUrl}/api/users/validate-session`) // Example endpoint
-      .pipe(
-        tap(() => {
-          console.log('Session validated with backend. Token is still active.');
-          this.resetInactivityTimer(); // Reset timer on successful validation/activity
-        }),
-        catchError(error => {
-          console.error('Backend session validation failed:', error);
-          if (error.status === 401) {
-            console.log('Token invalid on backend. Forcing logout.');
-            this.logout();
-          }
-          return of(false);
-        }),
-        switchMap(() => of(true))
-      );
+    // Since backend validation endpoint is not available, we only validate locally.
+    this.resetInactivityTimer();
+    return of(true);
   }
 
   /**

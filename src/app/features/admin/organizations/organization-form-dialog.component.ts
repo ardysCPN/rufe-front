@@ -104,7 +104,16 @@ export class OrganizationFormDialogComponent {
 
       obs.subscribe({
         next: () => this.dialogRef.close(true),
-        error: (err) => console.error('Error saving organization', err)
+        error: (err) => {
+          console.error('Error saving organization', err);
+          const message = err.error?.message || 'Error al guardar la organización';
+          const details = err.error?.details;
+          let detailStr = '';
+          if (details) {
+            detailStr = ':\n' + Object.values(details).join('\n');
+          }
+          alert(message + detailStr);
+        }
       });
     }
   }
