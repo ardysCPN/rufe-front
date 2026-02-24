@@ -41,6 +41,8 @@ export interface AuditLog {
     fechaCreacion: string;
 }
 
+import { IMenuItem } from '../models/menu.model';
+
 @Injectable({
     providedIn: 'root'
 })
@@ -48,6 +50,19 @@ export class AdminRepository {
     private apiUrl = `${environment.apiUrl}/api`;
 
     constructor(private http: HttpClient) { }
+
+    // --- Menu Management ---
+    getAllMenus(): Observable<IMenuItem[]> {
+        return this.http.get<IMenuItem[]>(`${this.apiUrl}/admin/menu/all`);
+    }
+
+    getRoleMenuIds(roleId: number): Observable<number[]> {
+        return this.http.get<number[]>(`${this.apiUrl}/admin/menu/roles/${roleId}`);
+    }
+
+    updateRoleMenus(roleId: number, menuIds: number[]): Observable<void> {
+        return this.http.post<void>(`${this.apiUrl}/admin/menu/roles/${roleId}`, menuIds);
+    }
 
     // --- Audit Logs ---
     getAuditLogs(): Observable<AuditLog[]> {

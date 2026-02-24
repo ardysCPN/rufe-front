@@ -7,6 +7,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AdminRepository, Role } from '../../../core/repositories/admin.repository';
 import { RoleFormDialogComponent } from './role-form-dialog.component';
+import { RoleMenuDialogComponent } from './role-menu-dialog.component';
 
 
 @Component({
@@ -59,8 +60,11 @@ import { RoleFormDialogComponent } from './role-form-dialog.component';
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar" (click)="openDialog(role)">
+                    <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar" (click)="openDialog(role)">
                       <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="text-indigo-600" *ngIf="canManageMenu" matTooltip="Asignar Menú" (click)="openMenuDialog(role)">
+                      <mat-icon>menu_book</mat-icon>
                     </button>
                     <button mat-icon-button color="warn" *ngIf="canDelete" matTooltip="Eliminar" (click)="deleteRole(role)">
                       <mat-icon>delete</mat-icon>
@@ -87,6 +91,7 @@ export class RolesComponent implements OnInit {
   canCreate = false;
   canEdit = false;
   canDelete = false;
+  canManageMenu = false;
 
   constructor(
     private dialog: MatDialog,
@@ -104,6 +109,7 @@ export class RolesComponent implements OnInit {
     this.canCreate = this.permissionService.hasPermission('roles:crear');
     this.canEdit = this.permissionService.hasPermission('roles:actualizar');
     this.canDelete = this.permissionService.hasPermission('roles:eliminar');
+    this.canManageMenu = this.permissionService.hasPermission('roles:actualizar'); // Usamos el permiso de actualizar para gestionar el menú
   }
 
   loadRoles() {
@@ -128,6 +134,22 @@ export class RolesComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadRoles();
+      }
+    });
+    this.cdr.detectChanges();
+  }
+
+  openMenuDialog(role: Role) {
+    const dialogRef = this.dialog.open(RoleMenuDialogComponent, {
+      width: '100%',
+      maxWidth: '600px',
+      data: role,
+      panelClass: 'glass-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Podríamos recargar si fuera necesario, pero el cambio es en menu_roles
       }
     });
     this.cdr.detectChanges();
