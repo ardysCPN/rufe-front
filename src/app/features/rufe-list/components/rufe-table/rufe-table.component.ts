@@ -4,9 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RufeRepository } from '../../../../core/repositories/rufe.repository';
 import { RufeService, IRufeRemote } from '../../../../core/services/rufe.service';
 import { NetworkService } from '../../../../core/services/network.service';
+import { RufeDetailDialogComponent } from '../rufe-detail-dialog/rufe-detail-dialog.component';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -16,7 +18,8 @@ import { firstValueFrom } from 'rxjs';
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
@@ -78,7 +81,7 @@ import { firstValueFrom } from 'rxjs';
                 </td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                    <button mat-icon-button color="primary" matTooltip="Ver detalles" class="hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                    <button mat-icon-button color="primary" matTooltip="Ver detalles" (click)="viewDetail(item)" class="hover:bg-blue-100 dark:hover:bg-blue-900/40">
                       <mat-icon>visibility</mat-icon>
                     </button>
                     <button *ngIf="!item.isRemoteOnly" mat-icon-button color="accent" matTooltip="Editar" class="hover:bg-amber-100 dark:hover:bg-amber-900/40">
@@ -112,7 +115,8 @@ export class RufeListComponent implements OnInit {
     private router: Router,
     private rufeRepository: RufeRepository,
     private rufeService: RufeService,
-    private networkService: NetworkService
+    private networkService: NetworkService,
+    private dialog: MatDialog
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -155,7 +159,8 @@ export class RufeListComponent implements OnInit {
           corregimiento: r.corregimiento || '',
           sync: true,
           isRemoteOnly: true,
-          clienteId: r.clienteId
+          clienteId: r.clienteId,
+          raw: r
         });
       });
 
@@ -168,7 +173,18 @@ export class RufeListComponent implements OnInit {
           corregimiento: l.corregimiento || '',
           sync: l.estado_sincronizacion === 'sincronizado',
           isRemoteOnly: false,
-          clienteId: l.cliente_id
+          clienteId: l.cliente_id,
+          raw: {
+            id: -1,
+            clienteId: l.cliente_id,
+            eventoId: l.eventoId,
+            tipoEventoId: -1,
+            fechaRegistro: l.fecha_creacion_offline.toISOString(),
+            tipoUbicacionBienId: -1,
+            corregimiento: l.corregimiento,
+            veredaSectorBarrio: l.veredaSectorBarrio,
+            direccion: l.direccion
+          } as IRufeRemote
         });
       });
 
@@ -179,6 +195,15 @@ export class RufeListComponent implements OnInit {
     } finally {
       this.loading = false;
     }
+  }
+
+  viewDetail(item: any) {
+    this.dialog.open(RufeDetailDialogComponent, {
+      width: '100%',
+      maxWidth: '800px',
+      data: item.raw,
+      panelClass: 'glass-dialog'
+    });
   }
 
   createNew() {

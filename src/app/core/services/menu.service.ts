@@ -70,6 +70,15 @@ export class MenuService {
                 orden: 2,
                 children: null,
                 offline: true
+              },
+              {
+                id: 4,
+                nombre: 'Reportes',
+                ruta: '/reports/export',
+                icono: 'analytics',
+                orden: 3,
+                children: null,
+                offline: false
               }
             ];
             this.menuItemsSubject.next(offlineMenu);

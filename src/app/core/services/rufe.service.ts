@@ -46,4 +46,24 @@ export class RufeService {
     createRufe(payload: any): Observable<IRufeRemote> {
         return this.http.post<IRufeRemote>(this.apiUrl, payload);
     }
+
+    /**
+     * Export RUFE records to Excel using backend JasperReports
+     */
+    exportToExcel(params: any = {}): Observable<Blob> {
+        return this.http.get(`${this.apiUrl}/export/excel`, {
+            params,
+            responseType: 'blob'
+        });
+    }
+
+    /**
+     * Export RUFE records to PDF using backend JasperReports
+     */
+    exportToPdf(params: any = {}): Observable<Blob> {
+        return this.http.get(`${this.apiUrl}/export/pdf`, {
+            params,
+            responseType: 'blob'
+        });
+    }
 }
