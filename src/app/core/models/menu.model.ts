@@ -9,5 +9,6 @@ export interface IMenuItem {
   ruta: string | null;
   icono: string;
   orden: number;
+  offline?: boolean; // New property to indicate if accessible offline
   children: IMenuItem[] | null;
 }

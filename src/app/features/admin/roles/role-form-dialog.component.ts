@@ -2,6 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminRepository, Role } from '../../../core/repositories/admin.repository';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -13,6 +14,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
+    MatSnackBarModule,
     InputComponent,
     ButtonComponent
   ],
@@ -68,7 +70,8 @@ export class RoleFormDialogComponent {
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<RoleFormDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: Role | null,
-    private adminRepository: AdminRepository
+    private adminRepository: AdminRepository,
+    private snackBar: MatSnackBar
   ) {
     this.roleForm = this.fb.group({
       nombreRol: [data?.nombreRol || '', Validators.required],
@@ -84,8 +87,21 @@ export class RoleFormDialogComponent {
         : this.adminRepository.createRole(roleData);
 
       obs.subscribe({
-        next: () => this.dialogRef.close(true),
-        error: (err) => console.error('Error saving role', err)
+        next: () => {
+          this.snackBar.open(
+            `Rol ${this.data ? 'actualizado' : 'creado'} con éxito`,
+            'Cerrar',
+            { duration: 3000, panelClass: ['snackbar-success'] }
+          );
+          this.dialogRef.close(true);
+        },
+        error: (err) => {
+          console.error('Error saving role', err);
+          this.snackBar.open('Error al guardar el rol', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-error']
+          });
+        }
       });
     }
   }

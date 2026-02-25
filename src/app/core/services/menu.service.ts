@@ -46,11 +46,30 @@ export class MenuService {
             const offlineMenu: IMenuItem[] = [
               {
                 id: 1,
+                nombre: 'Inicio',
+                ruta: '/dashboard',
+                icono: 'dashboard',
+                orden: 0,
+                children: null,
+                offline: true
+              },
+              {
+                id: 2,
                 nombre: 'Nuevo RUFE',
                 ruta: '/rufe/new',
-                icono: 'add',
+                icono: 'add_circle',
                 orden: 1,
-                children: null
+                children: null,
+                offline: true
+              },
+              {
+                id: 3,
+                nombre: 'Registros RUFE',
+                ruta: '/rufe/list',
+                icono: 'list_alt',
+                orden: 2,
+                children: null,
+                offline: true
               }
             ];
             this.menuItemsSubject.next(offlineMenu);

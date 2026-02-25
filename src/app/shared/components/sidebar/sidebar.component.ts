@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Subject, takeUntil } from 'rxjs';
 
 import { MenuService } from '../../../core/services/menu.service';
+import { NetworkService } from '../../../core/services/network.service';
 import { IMenuItem } from '../../../core/models/menu.model';
 
 @Component({
@@ -36,12 +37,14 @@ import { IMenuItem } from '../../../core/models/menu.model';
 
       <nav class="space-y-2 px-3 text-sm font-medium">
         <ng-container *ngFor="let item of menuItems">
+          <!-- Item with children -->
           <details *ngIf="item.children && item.children.length > 0" class="group [&_summary::-webkit-details-marker]:hidden">
             <summary
               class="flex items-center justify-between px-4 py-3 text-gray-600 rounded-xl cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-all duration-200"
               [class.bg-blue-50]="isActiveParent(item)"
               [class.text-blue-700]="isActiveParent(item)"
               [class.dark:bg-gray-800]="isActiveParent(item)"
+              [ngClass]="{'opacity-50 grayscale pointer-events-none': isItemDisabled(item)}"
             >
               <div class="flex items-center gap-4">
                 <mat-icon class="text-gray-400 group-hover:text-blue-600 transition-colors">{{ item.icono }}</mat-icon>
@@ -56,6 +59,7 @@ import { IMenuItem } from '../../../core/models/menu.model';
                 [routerLink]="subItem.ruta"
                 routerLinkActive="bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none"
                 class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-500 hover:text-blue-700 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-all duration-200"
+                [ngClass]="{'opacity-50 grayscale pointer-events-none': isItemDisabled(subItem)}"
               >
                <span class="w-1.5 h-1.5 rounded-full bg-current opacity-50"></span>
                {{ subItem.nombre }}
@@ -63,12 +67,14 @@ import { IMenuItem } from '../../../core/models/menu.model';
             </div>
           </details>
 
+          <!-- Single item -->
           <a
             *ngIf="!item.children || item.children.length === 0"
             [routerLink]="item.ruta"
             routerLinkActive="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-300/50 dark:shadow-none"
             #rla="routerLinkActive"
             class="flex items-center gap-4 rounded-xl px-4 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-all duration-200 group"
+            [ngClass]="{'opacity-50 grayscale pointer-events-none': isItemDisabled(item)}"
           >
             <mat-icon [class.text-white]="rla.isActive" class="text-gray-400 group-hover:text-blue-600 transition-colors">{{ item.icono }}</mat-icon>
             <span *ngIf="!collapsed || hovering" class="truncate">{{ item.nombre }}</span>
@@ -104,7 +110,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   menuItems: IMenuItem[] = [];
   private destroy$ = new Subject<void>();
 
-  constructor(private menuService: MenuService) { }
+  constructor(
+    private menuService: MenuService,
+    private networkService: NetworkService
+  ) { }
 
   ngOnInit(): void {
     this.menuService.menuItems$
@@ -112,6 +121,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .subscribe(items => {
         this.menuItems = items;
       });
+  }
+
+  isItemDisabled(item: IMenuItem): boolean {
+    const isOfflineSession = localStorage.getItem('isOfflineSession') === 'true';
+    if (this.networkService.isOnline && !isOfflineSession) {
+      return false;
+    }
+    // If offline, disable items that are NOT marked as offline-compatible.
+    return !item.offline;
   }
 
   ngOnDestroy(): void {

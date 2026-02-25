@@ -2,6 +2,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminRepository, User, Role } from '../../../core/repositories/admin.repository';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { SelectComponent } from '../../../shared/components/select/select.component';
@@ -15,6 +16,7 @@ import { ICatalogoItemResponse } from '../../../models/catalogs.model';
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
+    MatSnackBarModule,
     InputComponent,
     SelectComponent,
     ButtonComponent
@@ -95,7 +97,8 @@ export class UserFormDialogComponent implements OnInit {
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<UserFormDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: User | null,
-    private adminRepository: AdminRepository
+    private adminRepository: AdminRepository,
+    private snackBar: MatSnackBar
   ) {
     this.userForm = this.fb.group({
       nombreCompleto: [data?.nombreCompleto || '', Validators.required],
@@ -128,16 +131,20 @@ export class UserFormDialogComponent implements OnInit {
         : this.adminRepository.createUser(userData);
 
       obs.subscribe({
-        next: () => this.dialogRef.close(true),
+        next: () => {
+          this.snackBar.open(
+            `Usuario ${this.data ? 'actualizado' : 'creado'} con éxito`,
+            'Cerrar',
+            { duration: 3000, panelClass: ['snackbar-success'] }
+          );
+          this.dialogRef.close(true);
+        },
         error: (err) => {
           console.error('Error saving user', err);
-          const message = err.error?.message || 'Error al guardar el usuario';
-          const details = err.error?.details;
-          let detailStr = '';
-          if (details) {
-            detailStr = ':\n' + Object.values(details).join('\n');
-          }
-          alert(message + detailStr); // Using alert as quick fallback, but snackbar is better if available
+          this.snackBar.open('Error al guardar el usuario', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-error']
+          });
         }
       });
     }

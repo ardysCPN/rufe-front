@@ -2,6 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminRepository, Organization } from '../../../core/repositories/admin.repository';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -13,9 +14,11 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
+    MatSnackBarModule,
     InputComponent,
     ButtonComponent
   ],
+  // ... rest of template same ...
   template: `
     <div class="bg-white dark:bg-gray-800 p-6 md:p-8 w-full max-w-lg mx-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
       <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
@@ -83,7 +86,8 @@ export class OrganizationFormDialogComponent {
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<OrganizationFormDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: Organization | null,
-    private adminRepository: AdminRepository
+    private adminRepository: AdminRepository,
+    private snackBar: MatSnackBar
   ) {
     console.log('OrganizationFormDialogComponent initialized with data:', data);
     this.orgForm = this.fb.group({
@@ -103,16 +107,20 @@ export class OrganizationFormDialogComponent {
         : this.adminRepository.createOrganization(orgData);
 
       obs.subscribe({
-        next: () => this.dialogRef.close(true),
+        next: () => {
+          this.snackBar.open(
+            `Organización ${this.data ? 'actualizada' : 'creada'} con éxito`,
+            'Cerrar',
+            { duration: 3000, panelClass: ['snackbar-success'] }
+          );
+          this.dialogRef.close(true);
+        },
         error: (err) => {
           console.error('Error saving organization', err);
-          const message = err.error?.message || 'Error al guardar la organización';
-          const details = err.error?.details;
-          let detailStr = '';
-          if (details) {
-            detailStr = ':\n' + Object.values(details).join('\n');
-          }
-          alert(message + detailStr);
+          this.snackBar.open('Error al guardar la organización', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-error']
+          });
         }
       });
     }
