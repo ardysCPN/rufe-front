@@ -96,6 +96,22 @@ export class AuthService {
     return this.currentUserValue?.token || null;
   }
 
+  /**
+   * Check if the current user has a specific permission.
+   * Supports 'ROLE_ADMIN_GLOBAL' bypass.
+   */
+  public hasPermission(permission: string): boolean {
+    const user = this.currentUserValue;
+    if (!user) return false;
+    
+    // Global Admin has all permissions
+    if (user.rolNombre === 'ADMIN_GLOBAL' || user.permissions.includes('ROLE_ADMIN_GLOBAL')) {
+      return true;
+    }
+
+    return user.permissions.includes(permission);
+  }
+
   isTokenExpired(token: string): boolean {
     if (!token) {
       return true;
@@ -135,18 +151,23 @@ export class AuthService {
           // Try to get email from token if not in response body, or use placeholder
           const email = response.user.email || decodedToken?.sub || 'usuario@sistema.com';
 
+          // Map authorities from JWT if permissions is not provided in response body
+          let permissions = response.permissions || [];
+          if (permissions.length === 0 && decodedToken && decodedToken.authorities) {
+            permissions = decodedToken.authorities.split(',');
+          }
+
           const user: IUser = {
             token: response.token,
             type: response.type,
             userId: response.user.id,
             email: email,
             organizacionId: response.user.organizacionId,
-            // Fallback since backend stopped sending organization name
             organizacionNombre: response.user.organizacionNombre || 'Organización',
             rolId: response.user.rolId,
-            rolNombre: response.user.rol, // Mapped from 'rol'
+            rolNombre: response.user.rol,
             expiresAt: expiresAt,
-            permissions: response.permissions || []
+            permissions: permissions
           };
 
           if (this.isBrowser) {

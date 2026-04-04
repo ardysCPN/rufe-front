@@ -66,6 +66,29 @@ export const routes: Routes = [
         path: 'admin/audit',
         loadComponent: () => import('./features/admin/audit/audit-logs.component').then(m => m.AuditLogsComponent)
       },
+      {
+        path: 'bodega/inventario',
+        loadComponent: () => import('./features/admin/bodega/bodega-management.component').then(m => m.BodegaManagementComponent),
+        data: { tab: 'inventario' }
+      },
+      {
+        path: 'bodega/historial',
+        loadComponent: () => import('./features/admin/bodega/bodega-management.component').then(m => m.BodegaManagementComponent),
+        data: { tab: 'historial' }
+      },
+      {
+        path: 'bodega/entregas',
+        loadComponent: () => import('./features/logistics/entrega-ayudas.component').then(m => m.EntregaAyudasComponent)
+      },
+      {
+        path: 'bodega/planificacion',
+        loadComponent: () => import('./features/logistics/planeacion-entregas.component').then(m => m.PlaneacionEntregasComponent)
+      },
+      {
+        path: 'bodega/dashboard',
+        redirectTo: 'bodega/inventario',
+        pathMatch: 'full'
+      },
       // Tools
       {
         path: 'tools/sub',
