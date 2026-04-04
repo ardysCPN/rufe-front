@@ -23,6 +23,8 @@ import { RufeRepository } from '../../../../core/repositories/rufe.repository';
 import { CatalogRepository } from '../../../../core/repositories/catalog.repository';
 import { EventosRepository, EventoReal } from '../../../../core/repositories/eventos.repository';
 import { NetworkService } from '../../../../core/services/network.service';
+import { EvidenceService } from '../../../../core/services/evidence.service';
+import { MediaCaptureComponent } from '../../../../shared/components/media-capture/media-capture.component';
 
 // Custom validator for unique document numbers within the FormArray
 function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any } | null {
@@ -55,7 +57,8 @@ function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any
     InputComponent,
     SelectComponent,
     ButtonComponent,
-    MatDialogModule
+    MatDialogModule,
+    MediaCaptureComponent
   ],
   templateUrl: './rufe-form.component.html',
 })
@@ -65,6 +68,9 @@ export class RufeFormComponent implements OnInit {
 
 
   isViewActive = true; // Control para Soft Reload
+
+  // Evidencias
+  capturedEvidences: File[] = [];
 
   // Catalog properties
   departments: ICatalogoItemResponse[] = [];
@@ -93,7 +99,8 @@ export class RufeFormComponent implements OnInit {
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private evidenceService: EvidenceService
   ) {
     this.createForm();
   }
@@ -281,6 +288,16 @@ export class RufeFormComponent implements OnInit {
     }
   }
 
+  // Media Capture Handlers
+  onMediaCapture(file: File) {
+    this.capturedEvidences.push(file);
+    this.snackBar.open('📸 Foto capturada y lista para subir', 'OK', { duration: 2000 });
+  }
+
+  onMediaReset() {
+    this.capturedEvidences = [];
+  }
+
   // Form Actions
   private logValidationErrors(group: FormGroup | FormArray, parentPath: string[] = []) {
     Object.keys(group.controls).forEach(key => {
@@ -313,8 +330,15 @@ export class RufeFormComponent implements OnInit {
         // Intentar enviar al backend si hay red
         if (this.network.isOnline) {
           try {
-            await this.http.post(`${environment.apiUrl}/api/rufe`, payload).toPromise();
+            const response: any = await this.http.post(`${environment.apiUrl}/api/rufe`, payload).toPromise();
             sentToServer = true;
+            const registroRufeId = response.id;
+
+            // UPLOAD EVIDENCES ASYNC
+            if (this.capturedEvidences.length > 0) {
+              this.uploadAndLinkEvidences(registroRufeId);
+            }
+
             this.showSuccessModal('Enviado Exitosamente', 'La información se ha cargado correctamente en el servidor.');
           } catch (error) {
             console.error('Error al enviar al backend (HTTP o Red), procediendo a guardar localmente:', error);
@@ -408,6 +432,23 @@ export class RufeFormComponent implements OnInit {
     });
   }
 
+  private async uploadAndLinkEvidences(registroRufeId: number) {
+    for (const file of this.capturedEvidences) {
+      try {
+        const uploadRes = await this.evidenceService.uploadFile(file).toPromise();
+        if (uploadRes && uploadRes.url) {
+          await this.evidenceService.linkToRufe({
+            registroRufeId,
+            fotoUrl: uploadRes.url,
+            tipoEvidencia: 'FOTO_CENSO'
+          }).toPromise();
+        }
+      } catch (err) {
+        console.error('Error subiendo evidencia:', err);
+      }
+    }
+  }
+
   private buildBackendPayload(formValue: any): any {
     const fechaRegistro = formValue.fechaRufe
       ? DateUtils.toLocalDateTime(formValue.fechaRufe) || DateUtils.currentLocalDateTime()
@@ -474,6 +515,7 @@ export class RufeFormComponent implements OnInit {
     // 3. Reset auxiliary states
     this.filteredMunicipalities = [];
     this.selectedEvent = null;
+    this.capturedEvidences = [];
 
     // 4. Force view destruction cycle
     this.cdr.detectChanges();

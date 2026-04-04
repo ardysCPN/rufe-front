@@ -15,6 +15,7 @@ export interface IRufeRemote {
     corregimiento?: string;
     veredaSectorBarrio?: string;
     direccion?: string;
+    totalIntegrantes?: number;
     // ... other fields could be added
 }
 
@@ -51,7 +52,7 @@ export class RufeService {
      * Export RUFE records to Excel using backend JasperReports
      */
     exportToExcel(params: any = {}): Observable<Blob> {
-        return this.http.get(`${this.apiUrl}/export/excel`, {
+        return this.http.get(`${this.apiUrl}/excel`, {
             params,
             responseType: 'blob'
         });
@@ -61,7 +62,7 @@ export class RufeService {
      * Export RUFE records to PDF using backend JasperReports
      */
     exportToPdf(params: any = {}): Observable<Blob> {
-        return this.http.get(`${this.apiUrl}/export/pdf`, {
+        return this.http.get(`${this.apiUrl}/pdf`, {
             params,
             responseType: 'blob'
         });
