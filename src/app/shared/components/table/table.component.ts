@@ -23,7 +23,7 @@ export interface TableColumn {
     MatProgressSpinnerModule
   ],
   template: `
-    <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+    <div class="table-container shadow-md border border-gray-200 dark:border-gray-700 rounded-lg">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-700">
           <tr>

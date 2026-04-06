@@ -40,6 +40,21 @@ html, body {
 
 .pt-safe { padding-top: var(--sat); }
 
+/* Global Responsive Table Wrapper */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  /* Allow vertical scrolling of parent while interacting with table */
+  touch-action: auto; 
+}
+
+/* Ensure table has a minimum width on mobile to avoid collapsing */
+.table-container table {
+  min-width: 600px;
+}
+
 /* Helper for full height that works on iOS and all major browsers */
 .h-full-viewport, .h-screen {
     height: 100vh; /* Fallback */

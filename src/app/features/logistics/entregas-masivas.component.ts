@@ -83,7 +83,7 @@ import { environment } from '../../../environments/environment';
            </div>
         </div>
         
-        <div class="overflow-x-auto max-h-[500px]">
+        <div class="table-container max-h-[500px]">
           <table class="w-full text-left border-collapse">
             <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 uppercase text-xs font-medium sticky top-0 z-10">
               <tr>
