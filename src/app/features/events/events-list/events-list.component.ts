@@ -46,7 +46,8 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
               <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre del Evento</th>
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-none">Ubicación</th>
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
@@ -61,6 +62,11 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
                 <td class="p-4">
                    <span class="px-2 py-1 rounded-full text-[10px] font-bold" [ngClass]="evento.tipoEvento === 'REAL' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'">
                      {{ evento.tipoEvento }}
+                   </span>
+                </td>
+                <td class="p-4">
+                   <span class="px-2 py-1 rounded-full text-[10px] font-bold shadow-sm" [ngClass]="evento.estado === 'CERRADO' ? 'bg-gray-100 text-gray-700 border border-gray-300' : 'bg-green-100 text-green-700 border border-green-300'">
+                     {{ evento.estado || 'ABIERTO' }}
                    </span>
                 </td>
                 <td class="p-4 text-sm text-gray-600 dark:text-gray-400">

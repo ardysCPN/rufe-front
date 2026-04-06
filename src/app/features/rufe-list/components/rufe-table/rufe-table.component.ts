@@ -124,7 +124,9 @@ export class RufeListComponent implements OnInit {
 
     // Re-cargar cuando vuelva la conexión
     this.networkService.isOnline$.subscribe(online => {
-      if (online) this.loadRufes();
+      if (online && this.rufes.length === 0) {
+        this.loadRufes();
+      }
     });
   }
 

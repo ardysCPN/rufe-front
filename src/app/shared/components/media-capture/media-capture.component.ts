@@ -2,97 +2,98 @@
 
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ButtonComponent } from '../button/button.component';
 
 @Component({
   selector: 'app-media-capture',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ButtonComponent],
   template: `
-    <div class="media-capture-container">
+    <div class="media-capture-container overflow-hidden">
       <!-- Preview Area -->
-      <div class="preview-box" [class.has-media]="capturedImage">
-        <img *ngIf="capturedImage" [src]="capturedImage" class="img-preview" />
+      <div class="preview-box relative group" [class.has-media]="capturedImage && !isCameraActive">
+        <video 
+          *ngIf="isCameraActive" 
+          #videoPlayer 
+          autoplay 
+          playsinline 
+          muted 
+          class="video-preview w-full h-full object-cover cursor-pointer"
+          (dblclick)="capturePhoto()"
+        ></video>
         
-        <video *ngIf="isCameraActive && !capturedImage" #videoPlayer autoplay playsinline class="video-preview"></video>
+        <img *ngIf="capturedImage && !isCameraActive" [src]="capturedImage" class="img-preview" />
         
-        <div *ngIf="!capturedImage && !isCameraActive" class="placeholder">
-          <span class="material-icons text-4xl text-gray-400">photo_camera</span>
-          <p class="text-sm text-gray-500 mt-2">No hay imagen capturada</p>
+        <div *ngIf="!capturedImage && !isCameraActive" class="placeholder py-8">
+          <span class="material-icons text-5xl text-gray-300">photo_camera</span>
+          <p class="text-sm text-gray-500 mt-2 font-medium">Cámara lista</p>
         </div>
+
+        <!-- Shutter Overlay Effect -->
+        <div *ngIf="isCapturing" class="absolute inset-0 bg-white/80 animate-flash z-50"></div>
       </div>
 
       <!-- Controls -->
-      <div class="controls flex flex-wrap gap-2 mt-4 justify-center">
-        <!-- Start Camera -->
-        <button 
-          *ngIf="!isCameraActive && !capturedImage" 
+      <div class="controls flex flex-wrap gap-3 mt-6 justify-center">
+        <app-button 
+          *ngIf="!isCameraActive" 
           (click)="startCamera()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          variant="primary"
+          customClasses="flex items-center gap-2 px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 font-bold"
         >
           <span class="material-icons">videocam</span>
-          Abrir Cámara
-        </button>
+          {{ capturedImage ? 'Cambiar Foto' : 'Abrir Cámara' }}
+        </app-button>
 
-        <!-- Capture Photo -->
-        <button 
-          *ngIf="isCameraActive && !capturedImage" 
+        <app-button 
+          *ngIf="isCameraActive" 
           (click)="capturePhoto()"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+          variant="primary"
+          customClasses="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 border-none px-6 py-3 rounded-xl shadow-lg shadow-orange-500/20 font-bold"
         >
-          <span class="material-icons">camera</span>
-          Tomar Foto
-        </button>
+          <span class="material-icons">photo_camera</span>
+          Capturar
+        </app-button>
 
-        <!-- Stop Camera / Cancel -->
-        <button 
+        <app-button 
           *ngIf="isCameraActive" 
           (click)="stopCamera()"
-          class="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center gap-2 hover:bg-red-700 transition"
+          variant="basic"
+          customClasses="flex items-center gap-2 px-6 py-3 rounded-xl font-bold"
         >
-          <span class="material-icons">close</span>
-          Cancelar
-        </button>
+          <span class="material-icons">stop</span>
+          Finalizar
+        </app-button>
 
-        <!-- Upload File -->
         <label 
-          *ngIf="!isCameraActive && !capturedImage"
-          class="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 cursor-pointer hover:bg-purple-700 transition"
+          *ngIf="!isCameraActive"
+          class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition text-sm font-semibold border border-gray-300"
         >
-          <span class="material-icons">file_upload</span>
-          Subir Archivo
+          <span class="material-icons text-sm">file_upload</span>
+          Subir
           <input type="file" (change)="onFileSelected($event)" accept="image/*" class="hidden" />
         </label>
-
-        <!-- Reset -->
-        <button 
-          *ngIf="capturedImage" 
-          (click)="reset()"
-          class="px-4 py-2 bg-gray-600 text-white rounded-lg flex items-center gap-2 hover:bg-gray-700 transition"
-        >
-          <span class="material-icons">refresh</span>
-          Nueva Captura
-        </button>
       </div>
 
-      <!-- Hidden Canvas for capturing -->
       <canvas #captureCanvas class="hidden"></canvas>
     </div>
   `,
   styles: [`
     .media-capture-container {
-      @apply w-full max-w-md mx-auto p-4 border border-gray-200 rounded-xl bg-white shadow-sm;
+      @apply w-full mx-auto;
     }
     .preview-box {
-      @apply aspect-video w-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border-2 border-dashed border-gray-300;
+      @apply aspect-[4/3] w-full bg-black rounded-lg overflow-hidden flex items-center justify-center border-2 border-gray-700;
     }
-    .preview-box.has-media {
-      @apply border-none bg-black;
-    }
-    .img-preview, .video-preview {
+    .video-preview, .img-preview {
       @apply w-full h-full object-contain;
     }
-    .placeholder {
-      @apply flex flex-col items-center;
+    .animate-flash {
+      animation: flash 0.15s ease-out;
+    }
+    @keyframes flash {
+      0% { opacity: 0.8; }
+      100% { opacity: 0; }
     }
   `]
 })
@@ -106,51 +107,71 @@ export class MediaCaptureComponent implements OnDestroy {
 
   capturedImage: string | null = null;
   isCameraActive = false;
+  isCapturing = false;
   private stream: MediaStream | null = null;
 
   async startCamera() {
     try {
+      if (this.stream) this.stopCamera();
+
       this.stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, // Preferred back camera
+        video: { 
+          facingMode: 'environment', // Use back camera by default
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
         audio: false 
       });
       this.isCameraActive = true;
+      this.capturedImage = null;
       
-      // We need to wait for the view to update and render the video element
+      // Wait for Angular to render the video element after setting isCameraActive = true
       setTimeout(() => {
         if (this.videoPlayer) {
-          this.videoPlayer.nativeElement.srcObject = this.stream;
+          const video = this.videoPlayer.nativeElement;
+          video.srcObject = this.stream;
+          video.onloadedmetadata = () => {
+            video.play().catch(e => console.error('Error playing video:', e));
+          };
         }
-      }, 0);
+      }, 300);
     } catch (err) {
       console.error('Error accessing camera:', err);
-      alert('No se pudo acceder a la cámara. Por favor, asegúrate de dar los permisos necesarios.');
+      alert('Error: No se pudo activar la cámara. Verifique los permisos.');
     }
   }
 
   capturePhoto() {
-    if (!this.videoPlayer || !this.captureCanvas) return;
+    if (!this.videoPlayer || !this.captureCanvas || !this.stream) return;
 
+    this.isCapturing = true;
     const video = this.videoPlayer.nativeElement;
     const canvas = this.captureCanvas.nativeElement;
     
+    // Set canvas dimensions to match video stream
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
     const context = canvas.getContext('2d');
     if (context) {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      this.capturedImage = canvas.toDataURL('image/jpeg');
       
-      // Convert to File object for emission
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const file = new File([blob], `rufe_evidencia_${Date.now()}.jpg`, { type: 'image/jpeg' });
           this.onCapture.emit(file);
+          
+          // Show a quick preview of the last capture
+          this.capturedImage = canvas.toDataURL('image/jpeg', 0.7);
+          setTimeout(() => {
+             this.capturedImage = null; // Clear preview to show live video again
+          }, 800);
         }
-      }, 'image/jpeg');
+      }, 'image/jpeg', 0.8);
 
-      this.stopCamera();
+      setTimeout(() => {
+        this.isCapturing = false;
+      }, 150);
     }
   }
 

@@ -10,14 +10,28 @@ export interface AyudaCatalogo {
   nombre: string;
   descripcion?: string;
   unidadMedida?: string;
+  tipoAyuda?: 'INDIVIDUAL' | 'COLECTIVA';
   activo?: boolean;
+}
+
+export interface PlanificacionEntrega {
+  id?: number;
+  organizacionId: number;
+  eventoId: number;
+  registroRufeId: number;
+  ayudaCatalogoId: number;
+  cantidad: number;
+  estado: 'PENDIENTE' | 'ENTREGADO' | 'CANCELADO';
+  fechaCreacion?: string;
+  nombreBeneficiario?: string;
+  nombreArticulo?: string;
 }
 
 export interface BodegaInventario {
   id?: number;
   ayudaCatalogo?: AyudaCatalogo;
   organizacionId: number;
-  stockActual: number;
+  cantidad: number;
   ultimaActualizacion?: string;
 }
 
@@ -88,5 +102,28 @@ export class BodegaService {
    */
   getHistorialEntregas(): Observable<AyudasEntregadas[]> {
     return this.http.get<AyudasEntregadas[]>(`${this.apiUrl}/entregas`);
+  }
+
+  // --- Planning Endpoints ---
+
+  getPlanificacionEvento(eventoId: number): Observable<PlanificacionEntrega[]> {
+    return this.http.get<PlanificacionEntrega[]>(`${environment.apiUrl}/api/planificacion/evento/${eventoId}`);
+  }
+
+  getPendientesPlanificacion(): Observable<PlanificacionEntrega[]> {
+    return this.http.get<PlanificacionEntrega[]>(`${environment.apiUrl}/api/planificacion/pendientes`);
+  }
+
+  planificarEntrega(payload: {
+    eventoId: number;
+    registroRufeId: number;
+    ayudaCatalogoId: number;
+    cantidad: number;
+  }): Observable<PlanificacionEntrega> {
+    return this.http.post<PlanificacionEntrega>(`${environment.apiUrl}/api/planificacion`, payload);
+  }
+
+  eliminarPlanificacion(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/api/planificacion/${id}`);
   }
 }

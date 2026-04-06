@@ -82,7 +82,11 @@ export const routes: Routes = [
       },
       {
         path: 'bodega/planificacion',
-        loadComponent: () => import('./features/logistics/planeacion-entregas.component').then(m => m.PlaneacionEntregasComponent)
+        loadComponent: () => import('./features/logistics/planificacion-evento.component').then(m => m.PlanificacionEventoComponent)
+      },
+      {
+        path: 'bodega/entregas-masivas',
+        loadComponent: () => import('./features/logistics/entregas-masivas.component').then(m => m.EntregasMasivasComponent)
       },
       {
         path: 'bodega/dashboard',

@@ -23,7 +23,7 @@ import { Subject, filter, takeUntil } from 'rxjs';
     MatSidenavModule // Keep this import even if not directly used for the custom sidebar, as other components might need it.
   ],
   template: `
-    <div class="h-screen flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div class="h-full-viewport flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <app-navbar (toggleSidenav)="toggleSidebar()"></app-navbar>
       
       <div class="flex flex-1 overflow-hidden relative">
