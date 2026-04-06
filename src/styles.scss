@@ -11,7 +11,34 @@
     
     /* Viewport Fix for Mobile */
     --vh: 1vh;
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
 }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  /* Remove tap delay on mobile and prevent unintended zoom */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure smooth horizontal scrolling on touch */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Utility to add safe area padding */
+.p-safe {
+  padding-top: var(--sat);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+}
+
+.pt-safe { padding-top: var(--sat); }
 
 /* Helper for full height that works on iOS and all major browsers */
 .h-full-viewport, .h-screen {
