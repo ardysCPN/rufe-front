@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { PermissionService } from '../../../core/services/permission.service';
 import { EventosRepository, EventoReal } from '../../../core/repositories/eventos.repository';
@@ -18,7 +19,8 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
@@ -46,7 +48,8 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
               <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre del Evento</th>
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-none">Ubicación</th>
                 <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
@@ -61,6 +64,11 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
                 <td class="p-4">
                    <span class="px-2 py-1 rounded-full text-[10px] font-bold" [ngClass]="evento.tipoEvento === 'REAL' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'">
                      {{ evento.tipoEvento }}
+                   </span>
+                </td>
+                <td class="p-4">
+                   <span class="px-2 py-1 rounded-full text-[10px] font-bold shadow-sm" [ngClass]="evento.estado === 'CERRADO' ? 'bg-gray-100 text-gray-700 border border-gray-300' : 'bg-green-100 text-green-700 border border-green-300'">
+                     {{ evento.estado || 'ABIERTO' }}
                    </span>
                 </td>
                 <td class="p-4 text-sm text-gray-600 dark:text-gray-400">
@@ -93,6 +101,7 @@ export class EventsListComponent implements OnInit {
   constructor(
     private eventosRepository: EventosRepository,
     private dialog: MatDialog,
+    private snackBar: MatSnackBar,
     private router: Router
   ) { }
 
@@ -115,13 +124,34 @@ export class EventsListComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadEventos();
+      if (result) {
+        // Encontrar el índice del evento actualizado
+        const index = this.eventos.findIndex(e => e.id === result.id);
+        if (index !== -1) {
+          // Actualización Optimista: Reemplazamos el objeto localmente
+          // Esto garantiza que el cambio de estado (Abierto/Cerrado) se vea de inmediato
+          this.eventos[index] = { ...result };
+          // Forzamos una nueva referencia del array para que Angular detecte el cambio si fuera necesario
+          this.eventos = [...this.eventos];
+          
+          this.snackBar.open('Evento actualizado exitosamente', 'OK', { 
+            duration: 3000
+          });
+        }
+      }
     });
   }
 
   deleteEvento(evento: EventoReal) {
     if (confirm('¿Deseas eliminar este evento?')) {
-      this.eventosRepository.delete(evento.id!).subscribe(() => this.loadEventos());
+      this.eventosRepository.delete(evento.id!).subscribe(() => {
+        // Actualización Optimista: Filtramos el objeto localmente
+        this.eventos = this.eventos.filter(e => e.id !== evento.id);
+        
+        this.snackBar.open('Evento eliminado del listado', 'Cerrar', { 
+          duration: 3000 
+        });
+      });
     }
   }
 }

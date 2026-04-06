@@ -8,6 +8,26 @@
     --glass-bg: rgba(255, 255, 255, 0.7);
     --glass-border: rgba(255, 255, 255, 0.3);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    
+    /* Viewport Fix for Mobile */
+    --vh: 1vh;
+}
+
+/* Helper for full height that works on iOS and all major browsers */
+.h-full-viewport, .h-screen {
+    height: 100vh; /* Fallback */
+    height: -webkit-fill-available; /* Safari specific */
+    height: 100svh; /* Small Viewport (with bars) */
+    height: 100dvh; /* Dynamic Viewport (adjusts to bars) */
+    height: calc(var(--vh, 1vh) * 100); /* JS Fallback */
+}
+
+.min-h-screen {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: 100svh;
+    min-height: 100dvh;
+    min-height: calc(var(--vh, 1vh) * 100);
 }
 
 .dark {

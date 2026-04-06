@@ -6,7 +6,8 @@ import { DatabaseService } from '../services/database.service';
 
 export interface EventoReal {
     id?: number;
-    clienteId?: number;
+    organizacionId?: number;
+    clienteId?: string;
     nombreEvento: string;
     tipoEvento: string; // 'SIMULACRO' | 'REAL' etc.
     fechaEvento: string;
@@ -15,6 +16,7 @@ export interface EventoReal {
     municipioId?: number;
     municipio?: string; // name
     descripcion?: string;
+    estado?: string; // 'ABIERTO' | 'CERRADO'
 }
 
 @Injectable({

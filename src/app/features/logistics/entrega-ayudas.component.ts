@@ -150,10 +150,10 @@ export class EntregaAyudasComponent implements OnInit {
   loadInventory() {
     this.bodegaService.getInventario().subscribe((data: BodegaInventario[]) => {
       this.inventoryOptions = data
-        .filter(inv => inv.stockActual > 0)
+        .filter(inv => inv.cantidad > 0)
         .map(inv => ({
           id: inv.ayudaCatalogo?.id || 0,
-          nombre: `${inv.ayudaCatalogo?.nombre} (${inv.stockActual} ${inv.ayudaCatalogo?.unidadMedida})`
+          nombre: `${inv.ayudaCatalogo?.nombre} (${inv.cantidad} ${inv.ayudaCatalogo?.unidadMedida})`
         }));
     });
   }
@@ -167,7 +167,7 @@ export class EntregaAyudasComponent implements OnInit {
   onItemChange() {
     this.bodegaService.getInventario().subscribe((data: BodegaInventario[]) => {
        const inv = data.find(i => i.ayudaCatalogo?.id === this.selectedInventoryId);
-       this.selectedItemStock = inv ? inv.stockActual : 0;
+       this.selectedItemStock = inv ? inv.cantidad : 0;
     });
   }
 

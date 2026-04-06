@@ -24,7 +24,6 @@ import { CatalogRepository } from '../../../../core/repositories/catalog.reposit
 import { EventosRepository, EventoReal } from '../../../../core/repositories/eventos.repository';
 import { NetworkService } from '../../../../core/services/network.service';
 import { EvidenceService } from '../../../../core/services/evidence.service';
-import { MediaCaptureComponent } from '../../../../shared/components/media-capture/media-capture.component';
 
 // Custom validator for unique document numbers within the FormArray
 function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any } | null {
@@ -57,20 +56,22 @@ function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any
     InputComponent,
     SelectComponent,
     ButtonComponent,
-    MatDialogModule,
-    MediaCaptureComponent
+    MatDialogModule
   ],
   templateUrl: './rufe-form.component.html',
 })
 export class RufeFormComponent implements OnInit {
   rufeForm!: FormGroup;
-  isSubmitting = false; // Control de bloqueo botón guardar
+  isSubmitting = false;
 
+  isViewActive = true;
 
-  isViewActive = true; // Control para Soft Reload
-
-  // Evidencias
+  // Evidencias y UI
   capturedEvidences: File[] = [];
+  evidencePreviews: string[] = [];
+  showAgro = false;
+  showPecuario = false;
+  showPhotos = false;
 
   // Catalog properties
   departments: ICatalogoItemResponse[] = [];
@@ -166,7 +167,13 @@ export class RufeFormComponent implements OnInit {
     // Listener para mostrar información del evento seleccionado
     this.rufeForm.get('evento')?.valueChanges.subscribe(eventoId => {
       if (eventoId) {
-        this.selectedEvent = this.events.find(e => e.id === eventoId) || null;
+        this.selectedEvent = this.events.find(e => e.id === Number(eventoId)) || null;
+
+        // Alerta si el evento está cerrado (aunque no debería salir en la lista)
+        if (this.selectedEvent?.estado === 'CERRADO') {
+          alert('ATENCIÓN: Este evento se encuentra CERRADO. No se permiten nuevas capturas.');
+          this.rufeForm.get('evento')?.reset();
+        }
       } else {
         this.selectedEvent = null;
       }
@@ -181,19 +188,12 @@ export class RufeFormComponent implements OnInit {
       this.tiposEvento = await this.catalogRepository.getAllEventos();
 
       // 1. Cargar eventos REALES desde cache (IndexedDB) para visualización inmediata
-      this.events = await this.eventosRepository.getAllFromCache();
-      this.updateEventsSelect();
-
-      // Asegurar que si la lista está vacía pero hay conexión, no se bloquee el usuario esperando
-      if (this.events.length === 0 && this.network.isOnline) {
-        // El sync de abajo llenará la lista
-      }
+      this.loadEventos();
 
       // 2. Si hay conexión, sincronizar en segundo plano y actualizar vista
       if (this.network.isOnline) {
         this.eventosRepository.sync().then(async () => {
-          this.events = await this.eventosRepository.getAllFromCache();
-          this.updateEventsSelect();
+          this.loadEventos();
           console.log('Eventos actualizados desde el servidor.');
         }).catch(err => console.error('Fallo sync eventos fondo', err));
       }
@@ -209,8 +209,14 @@ export class RufeFormComponent implements OnInit {
       // TODO: Cargar el catálogo de unidades de medida si existe en el repositorio.
     } catch (error) {
       console.error('Error loading catalogs', error);
-      // Silent catch for production log or use a logger service
     }
+  }
+
+  async loadEventos(): Promise<void> {
+    const data = await this.eventosRepository.getAllFromCache();
+    // Solo mostrar eventos ABIERTOS o que no tengan estado definido (retrocompatibilidad)
+    this.events = data.filter(e => e.estado === 'ABIERTO' || !e.estado);
+    this.updateEventsSelect();
   }
 
   private updateEventsSelect(): void {
@@ -289,13 +295,45 @@ export class RufeFormComponent implements OnInit {
   }
 
   // Media Capture Handlers
+  async openCamera() {
+    const { CameraModalComponent } = await import('../../../../shared/components/modals/camera-modal.component');
+    const dialogRef = this.dialog.open(CameraModalComponent, {
+      width: '95vw',
+      maxWidth: '800px',
+      data: {}
+    });
+
+    dialogRef.afterClosed().subscribe((result: File[] | undefined) => {
+      if (result && Array.isArray(result)) {
+        result.forEach(file => this.onMediaCapture(file));
+      }
+    });
+  }
+
   onMediaCapture(file: File) {
     this.capturedEvidences.push(file);
-    this.snackBar.open('📸 Foto capturada y lista para subir', 'OK', { duration: 2000 });
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.evidencePreviews.push(e.target.result);
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+    this.snackBar.open('📸 Foto capturada', 'OK', { duration: 1500 });
+  }
+
+  removeEvidence(index: number) {
+    this.capturedEvidences.splice(index, 1);
+    this.evidencePreviews.splice(index, 1);
   }
 
   onMediaReset() {
     this.capturedEvidences = [];
+    this.evidencePreviews = [];
+  }
+
+  toggleSection(section: 'agro' | 'pecu') {
+    if (section === 'agro') this.showAgro = !this.showAgro;
+    if (section === 'pecu') this.showPecuario = !this.showPecuario;
   }
 
   // Form Actions

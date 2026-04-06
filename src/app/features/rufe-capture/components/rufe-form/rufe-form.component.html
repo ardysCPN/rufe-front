@@ -165,17 +165,12 @@
             <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Persona #{{ i + 1 }}</h4>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-              <app-input label="Nombre(s)" id="nombre-{{i}}" name="nombre-{{i}}" formControlName="nombres"
-                [required]="true"></app-input>
-              <app-input label="Apellido(s)" id="apellido-{{i}}" name="apellido-{{i}}" formControlName="apellidos"
-                [required]="true"></app-input>
-
               <app-select label="Tipo documento" id="tipo-doc-{{i}}" name="tipo-doc-{{i}}" [options]="documentTypes"
-                formControlName="tipoDocumento" [required]="true">
+                formControlName="tipoDocumento" [required]="true" class="order-1 md:order-1 lg:order-1">
               </app-select>
 
               <app-input label="Número documento" id="num-doc-{{i}}" name="num-doc-{{i}}" type="number"
-                placeholder="Sin puntos ni comas" formControlName="numeroDocumento" [required]="true">
+                placeholder="Sin puntos ni comas" formControlName="numeroDocumento" [required]="true" class="order-2 md:order-2 lg:order-2">
                 <ng-template #customError>
                   <p *ngIf="personaGroup.get('numeroDocumento')?.errors?.['uniqueDocument']"
                     class="mt-2 text-sm text-red-600">
@@ -184,23 +179,28 @@
                 </ng-template>
               </app-input>
 
+              <app-input label="Nombre(s)" id="nombre-{{i}}" name="nombre-{{i}}" formControlName="nombres"
+                [required]="true" class="order-3 md:order-3 lg:order-3"></app-input>
+              <app-input label="Apellido(s)" id="apellido-{{i}}" name="apellido-{{i}}" formControlName="apellidos"
+                [required]="true" class="order-4 md:order-4 lg:order-4"></app-input>
+
               <app-input label="Fecha de nacimiento" id="fecha-nac-{{i}}" name="fecha-nac-{{i}}" type="date"
-                formControlName="fechaNacimiento"></app-input>
+                formControlName="fechaNacimiento" class="order-5 md:order-5 lg:order-5"></app-input>
 
               <app-select label="Género" id="genero-{{i}}" name="genero-{{i}}" [options]="genders"
-                formControlName="genero" [required]="true">
+                formControlName="genero" [required]="true" class="order-6 md:order-6 lg:order-6">
               </app-select>
 
               <app-select label="Parentesco" id="parentesco-{{i}}" name="parentesco-{{i}}" [options]="relationships"
-                formControlName="parentesco" [required]="true">
+                formControlName="parentesco" [required]="true" class="order-7 md:order-7 lg:order-7">
               </app-select>
 
               <app-select label="Etnia" id="etnia-{{i}}" name="etnia-{{i}}" [options]="ethnicities"
-                formControlName="etnia">
+                formControlName="etnia" class="order-8 md:order-8 lg:order-8">
               </app-select>
 
               <app-input label="Teléfono" id="tel-{{i}}" name="tel-{{i}}" type="tel"
-                formControlName="telefono"></app-input>
+                formControlName="telefono" class="order-9 md:order-9 lg:order-9"></app-input>
             </div>
 
             <div class="absolute top-2 right-2">
@@ -220,37 +220,45 @@
 
       <div class="border-t border-gray-200 dark:border-gray-700 my-8"></div>
 
-      <!-- Section: Agropecuario (Dynamic Table) -->
+      <!-- Sección: Agropecuario -->
       <div class="mb-6">
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Agropecuario
-        </h3>
-        <div formArrayName="agropecuario" class="space-y-6">
-          <div *ngFor="let agroGroup of agropecuario.controls; let i = index" [formGroupName]="i"
-            class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
-            <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Ítem #{{ i + 1 }}</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-              <app-input label="Tipo de cultivo" id="cultivo-{{i}}" name="cultivo-{{i}}"
-                formControlName="tipoCultivo"></app-input>
-              <app-select label="Unidad de medida" id="medida-{{i}}" name="medida-{{i}}" [options]="measureUnits"
-                formControlName="unidadMedida"></app-select>
-              <app-input label="Área" id="area-{{i}}" name="area-{{i}}" type="number"
-                formControlName="area"></app-input>
-              <app-input label="Cantidad" id="cantidad-{{i}}" name="cantidad-{{i}}" type="number"
-                formControlName="cantidad"></app-input>
-            </div>
-            <div class="absolute top-2 right-2">
-              <app-button *ngIf="agropecuario.length > 1" type="button" variant="danger"
-                customClasses="px-2 py-1 text-xs" (click)="removeAgropecuario(i)">
-                Eliminar
-              </app-button>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Agropecuario
+          </h3>
+          <app-button type="button" variant="basic" customClasses="text-xs px-2 py-1" (click)="toggleSection('agro')">
+            {{ showAgro ? 'Ocultar' : 'Habilitar Sección' }}
+          </app-button>
+        </div>
+        
+        <div *ngIf="showAgro" class="animate-fadeIn">
+          <div formArrayName="agropecuario" class="space-y-6">
+            <div *ngFor="let agroGroup of agropecuario.controls; let i = index" [formGroupName]="i"
+              class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 relative">
+              <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-4">Ítem #{{ i + 1 }}</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+                <app-input label="Tipo de cultivo" id="cultivo-{{i}}" name="cultivo-{{i}}"
+                  formControlName="tipoCultivo"></app-input>
+                <app-select label="Unidad de medida" id="medida-{{i}}" name="medida-{{i}}" [options]="measureUnits"
+                  formControlName="unidadMedida"></app-select>
+                <app-input label="Área" id="area-{{i}}" name="area-{{i}}" type="number"
+                  formControlName="area"></app-input>
+                <app-input label="Cantidad" id="cantidad-{{i}}" name="cantidad-{{i}}" type="number"
+                  formControlName="cantidad"></app-input>
+              </div>
+              <div class="absolute top-2 right-2">
+                <app-button *ngIf="agropecuario.length > 1" type="button" variant="danger"
+                  customClasses="px-2 py-1 text-xs" (click)="removeAgropecuario(i)">
+                  Eliminar
+                </app-button>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="mt-4 flex justify-end">
-          <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addAgropecuario()">
-            Agregar Ítem
-          </app-button>
+          <div class="mt-4 flex justify-end">
+            <app-button type="button" variant="secondary" customClasses="px-4 py-2" (click)="addAgropecuario()">
+              Agregar Ítem
+            </app-button>
+          </div>
         </div>
       </div>
 
@@ -258,10 +266,16 @@
 
       <!-- Section: Sector Pecuario -->
       <div class="mb-6">
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Sector Pecuario
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Sector Pecuario
+          </h3>
+          <app-button type="button" variant="basic" customClasses="text-xs px-2 py-1" (click)="toggleSection('pecu')">
+            {{ showPecuario ? 'Ocultar' : 'Habilitar Sección' }}
+          </app-button>
+        </div>
+        
+        <div *ngIf="showPecuario" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 animate-fadeIn">
           <app-input label="Especie" id="especie" name="especie" formControlName="especie"></app-input>
           <app-input label="Cantidad" id="cantidad-pecuaria" name="cantidad-pecuaria" type="number"
             formControlName="cantidadPecuaria"></app-input>
@@ -287,25 +301,46 @@
           <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
             Evidencias Fotográficas (Opcional)
           </h3>
-          <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full dark:bg-blue-900 dark:text-blue-300">
-            {{ capturedEvidences.length }} capturadas
-          </span>
+          <div class="flex items-center gap-4">
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full dark:bg-blue-900 dark:text-blue-300">
+              {{ capturedEvidences.length }} capturadas
+            </span>
+            <app-button type="button" variant="basic" customClasses="text-xs px-2 py-1" (click)="showPhotos = !showPhotos">
+              {{ showPhotos ? 'Ocultar' : 'Habilitar Sección' }}
+            </app-button>
+          </div>
         </div>
         
-        <div class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <app-media-capture 
-            (onCapture)="onMediaCapture($event)" 
-            (onReset)="onMediaReset()">
-          </app-media-capture>
+        <div *ngIf="showPhotos" class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 animate-fadeIn">
+          <div class="flex flex-col items-center justify-center py-4">
+             <app-button 
+               type="button" 
+               variant="primary" 
+               customClasses="flex items-center gap-2 py-4 px-8 shadow-xl"
+               (click)="openCamera()">
+               <span class="material-icons">photo_camera</span>
+               Abrir Cámara y Capturar Fotos
+             </app-button>
+             <p class="text-xs text-gray-500 mt-4">Haz clic para abrir el asistente de cámara y tomar una o varias fotografías.</p>
+          </div>
           
-          <!-- Lista de archivos capturados (subidos) -->
-          <div *ngIf="capturedEvidences.length > 0" class="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-             <div *ngFor="let file of capturedEvidences; let i = index" class="relative group">
-                <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
-                   <span class="material-icons text-gray-400">image</span>
-                </div>
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-                   <span class="text-white text-[10px] font-medium truncate px-2">{{ file.name }}</span>
+          <!-- Galería de fotos capturadas -->
+          <div *ngIf="evidencePreviews.length > 0" class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+             <h4 class="text-sm font-bold mb-4 uppercase tracking-wider text-gray-400">Galería de Evidencias</h4>
+             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div *ngFor="let preview of evidencePreviews; let idx = index" class="relative group aspect-square rounded-xl overflow-hidden shadow-lg border-2 border-white dark:border-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
+                   <img [src]="preview" class="w-full h-full object-cover" />
+                   <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        type="button" 
+                        class="bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-transform hover:scale-110" 
+                        (click)="removeEvidence(idx)">
+                        <span class="material-icons">delete</span>
+                      </button>
+                   </div>
+                   <div class="absolute bottom-0 left-0 right-0 bg-black/70 py-1 px-2 text-[9px] text-white truncate text-center">
+                     {{ capturedEvidences[idx].name }}
+                   </div>
                 </div>
              </div>
           </div>
