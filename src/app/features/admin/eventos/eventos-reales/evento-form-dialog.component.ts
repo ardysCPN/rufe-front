@@ -170,12 +170,12 @@ export class EventoFormDialogComponent implements OnInit {
 
     this.form = this.fb.group({
       nombreEvento: [data?.nombreEvento || '', Validators.required],
-      tipoId: [data?.tipoEvento === 'SIMULACRO' ? 2 : 1, Validators.required],
+      tipoId: [data?.tipoEvento?.trim().toUpperCase() === 'SIMULACRO' ? 2 : 1, Validators.required],
       fechaEventoStr: [data?.fechaEvento ? new Date(data.fechaEvento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], Validators.required],
       departamento: [data?.departamento || '', Validators.required],
       municipio: [data?.municipio || '', Validators.required],
       descripcion: [data?.descripcion || ''],
-      estadoId: [data?.estado === 'CERRADO' ? 2 : 1]
+      estadoId: [data?.estado?.trim().toUpperCase() === 'CERRADO' ? 2 : 1]
     });
   }
 

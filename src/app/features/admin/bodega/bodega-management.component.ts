@@ -4,6 +4,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { BodegaService, AyudaCatalogo, BodegaInventario, AyudasEntregadas } from '../../../core/services/bodega.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -275,22 +276,28 @@ export class BodegaManagementComponent implements OnInit {
   mergedInventario: any[] = [];
 
   loadData() {
-    this.bodegaService.getCatalogo().subscribe((catalog: AyudaCatalogo[]) => {
-      this.catalogo = catalog;
-      this.bodegaService.getInventario().subscribe((inventory: BodegaInventario[]) => {
-        this.inventario = inventory;
+    forkJoin({
+      catalog: this.bodegaService.getCatalogo(),
+      inventory: this.bodegaService.getInventario(),
+      history: this.bodegaService.getHistorialEntregas()
+    }).subscribe({
+      next: (result) => {
+        this.catalogo = result.catalog;
+        this.inventario = result.inventory;
+        this.historial = result.history;
+        
         // Merge catalog with inventory to show all items
-        this.mergedInventario = catalog.map(item => {
-          const invItem = inventory.find(inv => inv.ayudaCatalogo?.id === item.id);
+        this.mergedInventario = result.catalog.map(item => {
+          const invItem = result.inventory.find(inv => inv.ayudaCatalogo?.id === item.id);
           return {
             ayudaCatalogo: item,
             cantidad: invItem ? invItem.cantidad : 0,
             id: invItem ? invItem.id : null
           };
         });
-      });
+      },
+      error: (err) => console.error('Error loading bodega data:', err)
     });
-    this.bodegaService.getHistorialEntregas().subscribe((data: AyudasEntregadas[]) => this.historial = data);
   }
 
   saveCatalogItem() {

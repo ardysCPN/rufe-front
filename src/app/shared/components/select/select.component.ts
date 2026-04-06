@@ -1,12 +1,12 @@
 import { Component, Input, forwardRef, ChangeDetectorRef } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@angular/forms';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ICatalogoItemResponse } from '../../../models/catalogs.model';
 
 @Component({
   selector: 'app-select',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './select.component.html',
   providers: [
     {
@@ -63,23 +63,5 @@ export class SelectComponent implements ControlValueAccessor {
   setDisabledState?(isDisabled: boolean): void {
     this.disabled = isDisabled;
     this._cdr.markForCheck();
-  }
-
-  /**
-   * Se llama cuando el usuario selecciona una opción. Propaga el cambio al modelo.
-   */
-  onSelectionChange(event: Event) {
-    const selectElement = event.target as HTMLSelectElement;
-    const stringValue = selectElement.value;
-
-    // El placeholder tiene un valor de string vacío. Lo mapeamos a `null` para el modelo.
-    if (stringValue === '') {
-      this.onChange(null);
-    } else {
-      // Los valores de las opciones son los IDs numéricos. Los convertimos de nuevo a número para mantener la consistencia de tipos.
-      const numericValue = parseInt(stringValue, 10);
-      this.onChange(numericValue);
-    }
-    this.onTouched();
   }
 }

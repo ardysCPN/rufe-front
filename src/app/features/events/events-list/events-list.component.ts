@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { PermissionService } from '../../../core/services/permission.service';
 import { EventosRepository, EventoReal } from '../../../core/repositories/eventos.repository';
@@ -18,7 +19,8 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="p-8 animate-fade-in-up">
@@ -99,6 +101,7 @@ export class EventsListComponent implements OnInit {
   constructor(
     private eventosRepository: EventosRepository,
     private dialog: MatDialog,
+    private snackBar: MatSnackBar,
     private router: Router
   ) { }
 
@@ -121,13 +124,34 @@ export class EventsListComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadEventos();
+      if (result) {
+        // Encontrar el índice del evento actualizado
+        const index = this.eventos.findIndex(e => e.id === result.id);
+        if (index !== -1) {
+          // Actualización Optimista: Reemplazamos el objeto localmente
+          // Esto garantiza que el cambio de estado (Abierto/Cerrado) se vea de inmediato
+          this.eventos[index] = { ...result };
+          // Forzamos una nueva referencia del array para que Angular detecte el cambio si fuera necesario
+          this.eventos = [...this.eventos];
+          
+          this.snackBar.open('Evento actualizado exitosamente', 'OK', { 
+            duration: 3000
+          });
+        }
+      }
     });
   }
 
   deleteEvento(evento: EventoReal) {
     if (confirm('¿Deseas eliminar este evento?')) {
-      this.eventosRepository.delete(evento.id!).subscribe(() => this.loadEventos());
+      this.eventosRepository.delete(evento.id!).subscribe(() => {
+        // Actualización Optimista: Filtramos el objeto localmente
+        this.eventos = this.eventos.filter(e => e.id !== evento.id);
+        
+        this.snackBar.open('Evento eliminado del listado', 'Cerrar', { 
+          duration: 3000 
+        });
+      });
     }
   }
 }
