@@ -75,11 +75,11 @@ import { EventoFormDialogComponent } from '../../admin/eventos/eventos-reales/ev
                   {{ evento.municipio }}, {{ evento.departamento }}
                 </td>
                 <td class="p-4 text-right">
-                   <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button mat-icon-button color="primary" (click)="editEvento(evento)">
+                   <div class="flex justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <button mat-icon-button color="primary" (click)="editEvento(evento)" matTooltip="Editar">
                         <mat-icon>edit</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteEvento(evento)">
+                      <button mat-icon-button color="warn" (click)="deleteEvento(evento)" matTooltip="Eliminar">
                         <mat-icon>delete</mat-icon>
                       </button>
                    </div>

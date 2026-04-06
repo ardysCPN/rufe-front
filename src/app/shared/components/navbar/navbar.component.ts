@@ -21,7 +21,7 @@ import { ThemeToggleButtonComponent } from '../layout/theme-toggle-button.compon
     MatTooltipModule
   ],
   template: `
-    <header class="flex justify-between items-center py-3 px-6 bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300 relative z-40">
+    <header class="flex justify-between items-center py-3 px-6 pt-safe bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300 relative z-40">
       <div class="flex items-center gap-2 md:gap-4">
         <!-- Hamburger Button -->
         <button 
