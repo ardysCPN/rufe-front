@@ -107,7 +107,7 @@ import { environment } from '../../../environments/environment';
              </div>
           </div>
 
-          <div class="overflow-x-auto max-h-[600px]">
+          <div class="table-container max-h-[600px]">
             <table class="w-full text-left border-collapse">
               <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
                 <tr>

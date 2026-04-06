@@ -61,43 +61,45 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
           </button>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo Ayuda</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">U. Medida</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr *ngFor="let item of catalogo" class="hover:bg-gray-50 transition-colors group">
-                <td class="px-6 py-4 text-sm">{{ item.id }}</td>
-                <td class="px-6 py-4 text-sm font-medium">{{ item.nombre }}</td>
-                <td class="px-6 py-4 text-sm">
-                   <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
-                         [ngClass]="isColectiva(item) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'">
-                     {{ item.tipoAyuda || 'INDIVIDUAL' }}
-                   </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-500">{{ item.descripcion }}</td>
-                <td class="px-6 py-4 text-sm">{{ item.unidadMedida }}</td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button *appHasPermission="'bodega:actualizar'" (click)="editCatalogItem(item)" class="text-blue-600 hover:text-blue-800">
-                      <span class="material-icons text-sm">edit</span>
-                    </button>
-                    <button *appHasPermission="'bodega:eliminar'" (click)="deleteCatalogItem(item)" class="text-red-600 hover:text-red-800">
-                      <span class="material-icons text-sm">delete</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-xl border border-gray-100 dark:border-gray-800">
+          <div class="table-container">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo Ayuda</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Descripción</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">U. Medida</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr *ngFor="let item of catalogo" class="hover:bg-gray-50 transition-colors group">
+                  <td class="px-6 py-4 text-sm">{{ item.id }}</td>
+                  <td class="px-6 py-4 text-sm font-medium">{{ item.nombre }}</td>
+                  <td class="px-6 py-4 text-sm">
+                     <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                           [ngClass]="isColectiva(item) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'">
+                       {{ item.tipoAyuda || 'INDIVIDUAL' }}
+                     </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-500">{{ item.descripcion }}</td>
+                  <td class="px-6 py-4 text-sm">{{ item.unidadMedida }}</td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <button *appHasPermission="'bodega:actualizar'" (click)="editCatalogItem(item)" class="text-blue-600 hover:text-blue-800">
+                        <span class="material-icons text-sm">edit</span>
+                      </button>
+                      <button *appHasPermission="'bodega:eliminar'" (click)="deleteCatalogItem(item)" class="text-red-600 hover:text-red-800">
+                        <span class="material-icons text-sm">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -105,76 +107,80 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
       <div *ngIf="activeTab === 'inventario'" class="animate-fadeIn">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Stock Actual de la Organización</h3>
         
-        <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Artículo</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">U. Medida</th>
-                <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stock Disponible</th>
-                <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gestión</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              <tr *ngFor="let inv of mergedInventario" class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
-                <td class="px-6 py-4 whitespace-nowrap">
-                   <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ inv.ayudaCatalogo?.nombre }}</div>
-                   <div class="text-xs text-gray-500 dark:text-gray-400">{{ inv.ayudaCatalogo?.descripcion }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                  {{ inv.ayudaCatalogo?.unidadMedida }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black ring-1 ring-inset"
-                        [class.bg-green-100]="inv.cantidad > 0" [class.text-green-700]="inv.cantidad > 0" [class.ring-green-600/20]="inv.cantidad > 0"
-                        [class.bg-gray-100]="inv.cantidad <= 0" [class.text-gray-500]="inv.cantidad <= 0" [class.ring-gray-600/20]="inv.cantidad <= 0">
-                    {{ inv.cantidad }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <app-button 
-                    *appHasPermission="'bodega:actualizar'"
-                    variant="basic"
-                    customClasses="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-none shadow-none text-xs"
-                    (click)="openAdjustStock(inv)"
-                  >
-                    <span class="material-icons text-sm mr-1">settings</span>
-                    Ajustar
-                  </app-button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-xl border border-gray-200 dark:border-gray-700">
+          <div class="table-container">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Artículo</th>
+                  <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">U. Medida</th>
+                  <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stock Disponible</th>
+                  <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gestión</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tr *ngFor="let inv of mergedInventario" class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                     <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ inv.ayudaCatalogo?.nombre }}</div>
+                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ inv.ayudaCatalogo?.descripcion }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    {{ inv.ayudaCatalogo?.unidadMedida }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black ring-1 ring-inset"
+                          [class.bg-green-100]="inv.cantidad > 0" [class.text-green-700]="inv.cantidad > 0" [class.ring-green-600/20]="inv.cantidad > 0"
+                          [class.bg-gray-100]="inv.cantidad <= 0" [class.text-gray-500]="inv.cantidad <= 0" [class.ring-gray-600/20]="inv.cantidad <= 0">
+                      {{ inv.cantidad }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <app-button 
+                      *appHasPermission="'bodega:actualizar'"
+                      variant="basic"
+                      customClasses="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-none shadow-none text-xs"
+                      (click)="openAdjustStock(inv)"
+                    >
+                      <span class="material-icons text-sm mr-1">settings</span>
+                      Ajustar
+                    </app-button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- Tab Content: Historial -->
       <div *ngIf="activeTab === 'historial'" class="animate-fadeIn">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Registro de Entregas</h3>
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beneficiario (RUFE)</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evidencia</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr *ngFor="let delivery of historial">
-                <td class="px-6 py-4 text-sm">{{ delivery.fechaEntrega | date:'short' }}</td>
-                <td class="px-6 py-4 text-sm font-medium">#{{ delivery.registroRufeId }}</td>
-                <td class="px-6 py-4 text-sm">{{ delivery.ayudaCatalogo?.nombre }}</td>
-                <td class="px-6 py-4 text-sm">{{ delivery.cantidad }}</td>
-                <td class="px-6 py-4 text-sm">
-                   <a *ngIf="delivery.evidenciaFotoUrl" [href]="delivery.evidenciaFotoUrl" target="_blank" class="text-blue-600 hover:underline">Ver Foto</a>
-                   <span *ngIf="!delivery.evidenciaFotoUrl" class="text-gray-400">Sin foto</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-100 dark:border-gray-800">
+          <div class="table-container">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beneficiario (RUFE)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evidencia</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr *ngFor="let delivery of historial">
+                  <td class="px-6 py-4 text-sm">{{ delivery.fechaEntrega | date:'short' }}</td>
+                  <td class="px-6 py-4 text-sm font-medium">#{{ delivery.registroRufeId }}</td>
+                  <td class="px-6 py-4 text-sm">{{ delivery.ayudaCatalogo?.nombre }}</td>
+                  <td class="px-6 py-4 text-sm">{{ delivery.cantidad }}</td>
+                  <td class="px-6 py-4 text-sm">
+                     <a *ngIf="delivery.evidenciaFotoUrl" [href]="delivery.evidenciaFotoUrl" target="_blank" class="text-blue-600 hover:underline">Ver Foto</a>
+                     <span *ngIf="!delivery.evidenciaFotoUrl" class="text-gray-400">Sin foto</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

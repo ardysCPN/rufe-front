@@ -26,7 +26,7 @@ import { AdminRepository, AuditLog } from '../../../core/repositories/admin.repo
 
       <!-- Glass Table Card -->
       <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="table-container">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
@@ -59,7 +59,7 @@ import { AdminRepository, AuditLog } from '../../../core/repositories/admin.repo
                   {{ log.detalle }}
                 </td>
               </tr>
-
+              
               <!-- Empty State -->
               <tr *ngIf="logs.length === 0">
                 <td colspan="5" class="p-16 text-center text-gray-400">

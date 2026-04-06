@@ -38,8 +38,8 @@ import { EventoFormDialogComponent } from './evento-form-dialog.component';
         </button>
       </div>
 
-      <div class="bg-white/80 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div class="overflow-x-auto">
+      <div class="bg-white/80 dark:bg-gray-900/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800 overflow-hidden">
+        <div class="table-container">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
@@ -70,7 +70,7 @@ import { EventoFormDialogComponent } from './evento-form-dialog.component';
                   {{ evento.municipio }}, {{ evento.departamento }}
                 </td>
                 <td class="p-4 text-right">
-                  <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div class="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button mat-icon-button color="primary" *ngIf="canEdit" matTooltip="Editar" (click)="openDialog(evento)">
                       <mat-icon>edit</mat-icon>
                     </button>

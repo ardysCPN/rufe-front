@@ -51,7 +51,7 @@ import { CatalogFormDialogComponent } from './catalog-form-dialog.component';
                   </button>
                 </div>
 
-                <div class="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 max-h-[500px] overflow-y-auto">
+                <div class="table-container max-h-[500px] overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
                   <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
                       <tr>
@@ -63,7 +63,7 @@ import { CatalogFormDialogComponent } from './catalog-form-dialog.component';
                       <tr *ngFor="let item of cat.data" class="group hover:bg-blue-50/50 transition-colors">
                         <td class="p-4 font-medium dark:text-gray-200">{{ item.nombre }}</td>
                         <td class="p-4 text-right">
-                          <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div class="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                             <button mat-icon-button color="primary" (click)="openDialog(cat, item)" matTooltip="Editar">
                               <mat-icon>edit</mat-icon>
                             </button>
