@@ -1,6 +1,6 @@
 // src/app/shared/components/sidebar/sidebar.component.ts
 
-import { Component, OnInit, OnDestroy, Input, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, HostListener, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -124,6 +124,7 @@ import { OfflineRestrictionModalComponent } from '../modals/offline-restriction-
 })
 export class SidebarComponent implements OnInit, OnDestroy {
   @Input() collapsed: boolean = false;
+  @Output() menuClick = new EventEmitter<void>();
   hovering = false;
   menuItems: IMenuItem[] = [];
   isOfflineSession: boolean = false;
@@ -177,6 +178,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
           message: `La sección "${item.nombre}" requiere conexión al servidor central debido a la sensibilidad de su procesamiento de datos.`
         }
       });
+    } else {
+      // If item is enabled and clicked, notify for auto-close behavior
+      this.menuClick.emit();
     }
   }
 
