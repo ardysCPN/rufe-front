@@ -199,7 +199,7 @@ export class LoginComponent {
           duration: 3000,
           panelClass: ['snackbar-success']
         });
-        localStorage.setItem('isOfflineSession', 'true');
+        this.networkService.setOfflineSession(true);
         this.router.navigate(['/dashboard']);
       } else {
         this.snackBar.open('Sin conexión. Solo el último usuario logueado puede acceder.', 'Cerrar', {
@@ -213,8 +213,9 @@ export class LoginComponent {
     this.loading = true;
     this.authService.login({ email, password }).subscribe({
       next: (user) => {
-        localStorage.setItem('lastLoggedUserEmail', email);
-        this.snackBar.open(`¡Bienvenido, ${user.nombre}!`, 'Cerrar', { duration: 3000 });
+        const welcomeName = user.email.split('@')[0];
+        localStorage.setItem('lastLoggedUserEmail', user.email);
+        this.snackBar.open(`¡Bienvenido, ${welcomeName}!`, 'Cerrar', { duration: 3000 });
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
@@ -224,14 +225,25 @@ export class LoginComponent {
         if (err && err.user) {
           errorMessage = err.user;
           if (err.status === 0) {
-            const lastUserEmail = localStorage.getItem('lastLoggedUserEmail');
-            if (lastUserEmail && lastUserEmail === email) {
+            const enteredEmail = email.trim().toLowerCase();
+            const lastUserEmail = (localStorage.getItem('lastLoggedUserEmail') || '').trim().toLowerCase();
+            
+            // Fallback: tratar de obtener el email del objeto currentUser si existe
+            let desktopUserEmail = '';
+            try {
+              const storedUser = localStorage.getItem('currentUser');
+              if (storedUser) {
+                desktopUserEmail = JSON.parse(storedUser).email?.toLowerCase() || '';
+              }
+            } catch (e) {}
+
+            if ((lastUserEmail && lastUserEmail === enteredEmail) || (desktopUserEmail && desktopUserEmail === enteredEmail)) {
               this.snackBar.open(
                 'No se pudo conectar con el servidor, pero puedes trabajar en modo offline como el último usuario logueado.',
                 'Cerrar',
                 { duration: 5000, panelClass: ['snackbar-success'] }
               );
-              localStorage.setItem('isOfflineSession', 'true');
+              this.networkService.setOfflineSession(true);
               this.router.navigate(['/dashboard']);
               return;
             }

@@ -11,11 +11,17 @@ import { mapTo } from 'rxjs/operators';
 export class NetworkService {
   private isBrowser: boolean;
   private onlineStatusSubject = new BehaviorSubject<boolean>(true); // Assume online by default
+  private offlineSessionSubject = new BehaviorSubject<boolean>(false);
 
   /**
    * Observable that emits the current online/offline status.
    */
   public isOnline$: Observable<boolean> = this.onlineStatusSubject.asObservable();
+  
+  /**
+   * Observable that emits if we are in an enforced offline session.
+   */
+  public isOfflineSession$: Observable<boolean> = this.offlineSessionSubject.asObservable();
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -23,6 +29,10 @@ export class NetworkService {
     if (this.isBrowser) {
       // Initialize with current online status
       this.onlineStatusSubject.next(navigator.onLine);
+      
+      // Initialize offline session from localStorage (migration path)
+      const storedOffline = localStorage.getItem('isOfflineSession') === 'true';
+      this.offlineSessionSubject.next(storedOffline);
 
       // Listen for online/offline events
       merge(
@@ -43,5 +53,22 @@ export class NetworkService {
    */
   public get isOnline(): boolean {
     return this.onlineStatusSubject.value;
+  }
+
+  /**
+   * Returns if we are in an enforced offline session.
+   */
+  public get isOfflineSession(): boolean {
+    return this.offlineSessionSubject.value;
+  }
+
+  /**
+   * Sets the offline session state and persists it.
+   */
+  public setOfflineSession(value: boolean): void {
+    this.offlineSessionSubject.next(value);
+    if (this.isBrowser) {
+      localStorage.setItem('isOfflineSession', value.toString());
+    }
   }
 }

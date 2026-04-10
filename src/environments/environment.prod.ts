@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: '' // Loaded at runtime via ConfigService from /api/config
+  apiUrl: '', // Loaded at runtime via ConfigService from /api/config
+  backupEncryptionKey: 'hash'
 };

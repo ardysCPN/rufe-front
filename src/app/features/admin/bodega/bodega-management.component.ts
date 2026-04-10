@@ -8,6 +8,7 @@ import { forkJoin } from 'rxjs';
 import { BodegaService, AyudaCatalogo, BodegaInventario, AyudasEntregadas } from '../../../core/services/bodega.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { HasPermissionDirective } from '../../../shared/directives/has-permission.directive';
@@ -15,37 +16,53 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
 @Component({
   selector: 'app-bodega-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, HasPermissionDirective, MatIconModule],
   template: `
     <div class="p-6">
       <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Gestión de Bodega y Ayudas</h2>
 
-      <!-- Tabs -->
-      <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-        <button 
-          (click)="activeTab = 'catalogo'"
-          [class.border-blue-600]="activeTab === 'catalogo'"
-          [class.text-blue-600]="activeTab === 'catalogo'"
-          class="py-2 px-4 border-b-2 font-medium transition-colors"
-        >
-          Catálogo Global
-        </button>
-        <button 
-          (click)="activeTab = 'inventario'"
-          [class.border-blue-600]="activeTab === 'inventario'"
-          [class.text-blue-600]="activeTab === 'inventario'"
-          class="py-2 px-4 border-b-2 font-medium transition-colors"
-        >
-          Inventario de Organización
-        </button>
-        <button 
-          (click)="activeTab = 'historial'"
-          [class.border-blue-600]="activeTab === 'historial'"
-          [class.text-blue-600]="activeTab === 'historial'"
-          class="py-2 px-4 border-b-2 font-medium transition-colors"
-        >
-          Historial de Entregas
-        </button>
+      <!-- Responsive Tabs -->
+      <div class="mb-8 overflow-x-auto hide-scrollbar -mx-6 px-6">
+        <div class="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-2xl min-w-max">
+          <button 
+            (click)="activeTab = 'catalogo'"
+            [class.bg-white]="activeTab === 'catalogo'"
+            [class.dark:bg-gray-700]="activeTab === 'catalogo'"
+            [class.shadow-md]="activeTab === 'catalogo'"
+            [class.text-blue-600]="activeTab === 'catalogo'"
+            [class.font-bold]="activeTab === 'catalogo'"
+            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+          >
+            <mat-icon class="text-lg">inventory_2</mat-icon>
+            Catálogo Global
+          </button>
+          
+          <button 
+            (click)="activeTab = 'inventario'"
+            [class.bg-white]="activeTab === 'inventario'"
+            [class.dark:bg-gray-700]="activeTab === 'inventario'"
+            [class.shadow-md]="activeTab === 'inventario'"
+            [class.text-blue-600]="activeTab === 'inventario'"
+            [class.font-bold]="activeTab === 'inventario'"
+            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+          >
+            <mat-icon class="text-lg">warehouse</mat-icon>
+            Inventario
+          </button>
+
+          <button 
+            (click)="activeTab = 'historial'"
+            [class.bg-white]="activeTab === 'historial'"
+            [class.dark:bg-gray-700]="activeTab === 'historial'"
+            [class.shadow-md]="activeTab === 'historial'"
+            [class.text-blue-600]="activeTab === 'historial'"
+            [class.font-bold]="activeTab === 'historial'"
+            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+          >
+            <mat-icon class="text-lg">history</mat-icon>
+            Historial
+          </button>
+        </div>
       </div>
 
       <!-- Tab Content: Catalogo -->
@@ -231,6 +248,13 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
   styles: [`
     .animate-fadeIn {
       animation: fadeIn 0.3s ease-in-out;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }

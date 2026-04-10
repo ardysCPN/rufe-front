@@ -71,6 +71,9 @@ import { ThemeToggleButtonComponent } from '../layout/theme-toggle-button.compon
                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
                  {{ (authService.currentUser | async)?.email }}
                </p>
+               <p class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tighter mt-0.5">
+                 {{ (authService.currentUser | async)?.rolNombre }}
+               </p>
             </div>
             
             <div class="p-1">

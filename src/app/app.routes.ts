@@ -67,6 +67,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/audit/audit-logs.component').then(m => m.AuditLogsComponent)
       },
       {
+        path: 'admin/menu',
+        loadComponent: () => import('./features/admin/menu/menu-management.component').then(m => m.MenuManagementComponent)
+      },
+      {
         path: 'bodega/inventario',
         loadComponent: () => import('./features/admin/bodega/bodega-management.component').then(m => m.BodegaManagementComponent),
         data: { tab: 'inventario' }

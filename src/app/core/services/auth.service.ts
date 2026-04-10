@@ -5,7 +5,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, throwError, of, timer, Subject, forkJoin, from } from 'rxjs'; // Added forkJoin
-import { catchError, tap, takeUntil, switchMap, finalize } from 'rxjs/operators';
+import { catchError, tap, takeUntil, switchMap, finalize, map } from 'rxjs/operators';
 import { ILoginCredentials, IUser, ICatalogApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 import { DatabaseService } from './database.service';
@@ -20,6 +20,7 @@ import {
   ICatalogoEvento
 } from '../../models/catalogs.model';
 import { MenuService } from './menu.service';
+import { NetworkService } from './network.service';
 
 // Helper function to decode JWT (simple version, for 'exp' claim)
 function decodeJwt(token: string): any | null {
@@ -56,6 +57,7 @@ export class AuthService {
     private dbService: DatabaseService, // Still needed for setup/clearing if not moved completely
     private catalogRepository: CatalogRepository,
     @Inject(forwardRef(() => MenuService)) private menuService: MenuService,
+    private networkService: NetworkService,
     @Inject(PLATFORM_ID) private platformId: Object,
     private ngZone: NgZone
   ) {
@@ -134,7 +136,7 @@ export class AuthService {
 
     return this.http.post<any>(`${environment.apiUrl}/auth/login`, loginPayload)
       .pipe(
-        tap(response => {
+        map(response => {
           console.log('Backend Login Response:', response);
 
           // Validate new structure (nested user)
@@ -172,19 +174,20 @@ export class AuthService {
 
           if (this.isBrowser) {
             localStorage.setItem('currentUser', JSON.stringify(user));
+            this.networkService.setOfflineSession(false); // Clear offline flag on success
             this.resetInactivityTimer();
           }
           this.currentUserSubject.next(user);
 
           if (this.isBrowser) {
-            // Catalogs and menu loading will be handled by LayoutComponent or specific guards
-            this.menuService.getDynamicMenu(this.currentUserSubject.value).subscribe({
+            // Side effect: load menu
+            this.menuService.getDynamicMenu(user).subscribe({
               next: () => console.log('Menú dinámico cargado.'),
               error: (err) => console.error('Error al cargar el menú dinámico:', err)
             });
-          } else {
-            console.log('Skipping catalog fetch/store and menu fetch on server (SSR).');
           }
+
+          return user; // Return the mapped user!
         }),
         catchError(this.handleError)
       );
@@ -325,7 +328,8 @@ export class AuthService {
           tipoDocumento: this.http.get<ICatalogoTipoDocumento[]>(`${environment.apiUrl}/api/catalogos/tipo-documento`),
           parentesco: this.http.get<ICatalogoParentesco[]>(`${environment.apiUrl}/api/catalogos/parentesco`),
           genero: this.http.get<ICatalogoGenero[]>(`${environment.apiUrl}/api/catalogos/genero`),
-          pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`)
+          pertenenciaEtnica: this.http.get<ICatalogoPertenenciaEtnica[]>(`${environment.apiUrl}/api/catalogos/pertenencia-etnica`),
+          menu: this.menuService.getDynamicMenu(user) // Integrated menu sync
         };
 
         // Use forkJoin to wait for all catalog requests to complete
