@@ -56,6 +56,7 @@ export class DatabaseService extends Dexie {
 
   // Meta table for small app metadata
   meta!: Table<IMeta, string>; // Primary key is key (string)
+  menus!: Table<any, number>; // Table for structured menu items
 
   private isBrowser: boolean;
   private dbReadyPromise: Promise<void>;
@@ -68,20 +69,21 @@ export class DatabaseService extends Dexie {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
     if (this.isBrowser) {
-      this.dbReadyPromise = new Promise(resolve => {
+      // Use Dexie.Promise instead of native Promise to keep transaction context
+      this.dbReadyPromise = new Dexie.Promise(resolve => {
         this.resolveDbReady = resolve;
       });
       this.defineSchema();
       this.openDatabase();
     } else {
-      // In SSR, db is not available. Resolve promise immediately.
-      this.dbReadyPromise = Promise.resolve();
+      // In SSR, db is not available
+      this.dbReadyPromise = Dexie.Promise.resolve();
       console.log('Skipping IndexedDB initialization on server (SSR).');
     }
   }
 
   private defineSchema(): void {
-    // version 1 schema: add all tables (including meta)
+    // version 1 schema kept for compatibility
     this.version(1).stores({
       rufes: '&cliente_id, id, estado_sincronizacion, fecha_creacion_offline',
       integrantes: '&cliente_id, id, registro_rufe_cliente_id, estado_sincronizacion',
@@ -100,6 +102,11 @@ export class DatabaseService extends Dexie {
       catalogos_eventos: '&id, nombre',
       eventos_reales: '&id, nombreEvento, tipoEvento, fechaEvento',
       meta: '&key'
+    });
+
+    // version 2 schema: add menus table
+    this.version(2).stores({
+      menus: '&id, nombre, parentId, orden, offline'
     });
   }
 
