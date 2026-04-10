@@ -83,7 +83,11 @@ export class BackupService {
 
   private downloadFile(blob: Blob): void {
     const now = new Date();
-    const timestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    const timestamp = now.toISOString()
+      .replace(/-/g, '')
+      .replace(/:/g, '')
+      .replace(/T/g, '')
+      .slice(0, 12);
     const filename = `rufe_backup_${timestamp}.enc`;
 
     const url = window.URL.createObjectURL(blob);
