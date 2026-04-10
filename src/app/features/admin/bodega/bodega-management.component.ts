@@ -22,8 +22,7 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
       <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Gestión de Bodega y Ayudas</h2>
 
       <!-- Responsive Tabs -->
-      <div class="mb-8 overflow-x-auto hide-scrollbar -mx-6 px-6">
-        <div class="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-2xl min-w-max">
+      <div class="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-2xl md:inline-flex w-full md:w-auto">
           <button 
             (click)="activeTab = 'catalogo'"
             [class.bg-white]="activeTab === 'catalogo'"
@@ -31,10 +30,10 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
             [class.shadow-md]="activeTab === 'catalogo'"
             [class.text-blue-600]="activeTab === 'catalogo'"
             [class.font-bold]="activeTab === 'catalogo'"
-            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+            class="py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 touch-manipulation min-w-[120px]"
           >
             <mat-icon class="text-lg">inventory_2</mat-icon>
-            Catálogo Global
+            <span class="whitespace-nowrap">Catálogo Global</span>
           </button>
           
           <button 
@@ -44,10 +43,10 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
             [class.shadow-md]="activeTab === 'inventario'"
             [class.text-blue-600]="activeTab === 'inventario'"
             [class.font-bold]="activeTab === 'inventario'"
-            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+            class="py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 touch-manipulation min-w-[120px]"
           >
             <mat-icon class="text-lg">warehouse</mat-icon>
-            Inventario
+            <span class="whitespace-nowrap">Inventario</span>
           </button>
 
           <button 
@@ -57,12 +56,11 @@ import { HasPermissionDirective } from '../../../shared/directives/has-permissio
             [class.shadow-md]="activeTab === 'historial'"
             [class.text-blue-600]="activeTab === 'historial'"
             [class.font-bold]="activeTab === 'historial'"
-            class="py-3 px-6 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center gap-2"
+            class="py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none flex items-center justify-center gap-2 touch-manipulation min-w-[120px]"
           >
             <mat-icon class="text-lg">history</mat-icon>
-            Historial
+            <span class="whitespace-nowrap">Historial</span>
           </button>
-        </div>
       </div>
 
       <!-- Tab Content: Catalogo -->

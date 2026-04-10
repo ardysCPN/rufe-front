@@ -162,3 +162,14 @@ body:not(.dark) {
 .dark ::-webkit-scrollbar-thumb:hover {
     background: #475569;
 }
+
+/* Global Form Theme Support */
+input, textarea, select {
+    background-color: #ffffff;
+    color: #111827;
+}
+
+.dark input, .dark textarea, .dark select {
+    background-color: #1f2937; /* gray-800 */
+    color: #f9fafb; /* gray-50 */
+}

@@ -89,6 +89,23 @@ import { CatalogFormDialogComponent } from './catalog-form-dialog.component';
     .custom-tabs ::ng-deep .mat-mdc-tab-body-wrapper {
       background: transparent;
     }
+    /* Fix dark mode contrast for inactive tabs */
+    :host-context(.dark) .custom-tabs ::ng-deep .mat-mdc-tab:not(.mdc-tab--active) .mdc-tab__text-label {
+      color: #9ca3af !important; /* gray-400 */
+    }
+    /* Mobile enhancements for tabs */
+    @media (max-width: 768px) {
+      .custom-tabs ::ng-deep .mat-mdc-tab {
+        min-width: 100px !important;
+        padding: 0 8px !important;
+      }
+      .custom-tabs ::ng-deep .mdc-tab__text-label {
+        font-size: 11px !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+    }
   `]
 })
 export class CatalogManagementComponent implements OnInit {

@@ -10,6 +10,7 @@ import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav'; // Kee
 import { AuthService } from '../../../core/services/auth.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { NetworkService } from '../../../core/services/network.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, filter, takeUntil } from 'rxjs';
 
 @Component({
@@ -20,7 +21,8 @@ import { Subject, filter, takeUntil } from 'rxjs';
     RouterOutlet,
     NavbarComponent,
     SidebarComponent,
-    MatSidenavModule // Keep this import even if not directly used for the custom sidebar, as other components might need it.
+    MatSidenavModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="h-full-viewport flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
@@ -37,6 +39,7 @@ import { Subject, filter, takeUntil } from 'rxjs';
         <!-- Sidebar -->
         <app-sidebar 
           [collapsed]="isCollapsed"
+          (menuClick)="onMenuClick()"
           class="fixed md:relative z-30 h-full transition-transform duration-300 ease-in-out md:translate-x-0"
           [class.-translate-x-full]="isCollapsed"
           [class.translate-x-0]="!isCollapsed"
@@ -65,6 +68,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private menuService: MenuService,
     private networkService: NetworkService,
+    private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) {
     // Initial collapse state based on screen size
@@ -98,11 +102,29 @@ export class LayoutComponent implements OnInit, OnDestroy {
       )
       .subscribe(() => {
         const currentUser = this.authService.currentUserValue;
-        if (currentUser && currentUser.token) { // Only fetch if user is logged in
-          console.log('LayoutComponent: App is online and user is logged in. Attempting to fetch and store catalogs...');
-          this.authService.fetchAndStoreCatalogs().subscribe({
-            next: () => console.log('LayoutComponent: Catalogs updated successfully.'),
-            error: (err) => console.error('LayoutComponent: Failed to update catalogs:', err)
+        if (currentUser && currentUser.token) { // Only notify if user is logged in
+          console.log('LayoutComponent: App is online. Prompting for synchronization...');
+          
+          const snackBarRef = this.snackBar.open(
+            '¡Conexión restablecida! Sincroniza ahora para actualizar tus datos.', 
+            'Sincronizar', 
+            { 
+              duration: 10000,
+              panelClass: ['online-sync-snackbar']
+            }
+          );
+
+          snackBarRef.onAction().subscribe(() => {
+            console.log('LayoutComponent: User requested sync. Fetching catalogs...');
+            this.authService.fetchAndStoreCatalogs().subscribe({
+              next: () => {
+                this.snackBar.open('Datos sincronizados correctamente.', 'Cerrar', { duration: 3000 });
+              },
+              error: (err) => {
+                console.error('LayoutComponent: Failed to update catalogs:', err);
+                this.snackBar.open('Error al sincronizar. Intenta de nuevo más tarde.', 'Cerrar', { duration: 5000 });
+              }
+            });
           });
         }
       });
@@ -127,5 +149,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.isCollapsed = !this.isCollapsed;
     console.log('Layout: Sidebar is now', this.isCollapsed ? 'collapsed' : 'expanded');
     this.cdr.detectChanges();
+  }
+
+  onMenuClick() {
+    // Auto-collapse sidebar on navigation if in mobile view (< 768px)
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      this.isCollapsed = true;
+      console.log('Layout: Mobile navigation detected, auto-collapsing sidebar.');
+      this.cdr.detectChanges();
+    }
   }
 }
