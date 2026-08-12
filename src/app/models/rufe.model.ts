@@ -41,5 +41,8 @@ export interface IIntegranteLocal {
   parentesco: number;
   etnia: number | null;
   telefono: string;
+  estadoPersonaId?: number;
+  esFallecido?: boolean;
+  observacionSalud?: string;
 }
 
