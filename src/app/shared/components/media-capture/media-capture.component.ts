@@ -1,6 +1,6 @@
 // src/app/shared/components/media-capture/media-capture.component.ts
 
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonComponent } from '../button/button.component';
 
@@ -11,22 +11,30 @@ import { ButtonComponent } from '../button/button.component';
   template: `
     <div class="media-capture-container overflow-hidden">
       <!-- Preview Area -->
-      <div class="preview-box relative group" [class.has-media]="capturedImage && !isCameraActive">
+      <div class="preview-box relative group bg-black min-h-[300px] rounded-xl overflow-hidden flex items-center justify-center border-2 border-gray-700">
         <video 
           *ngIf="isCameraActive" 
           #videoPlayer 
           autoplay 
           playsinline 
+          webkit-playsinline
           muted 
           class="video-preview w-full h-full object-cover cursor-pointer"
-          (dblclick)="capturePhoto()"
+          (click)="capturePhoto()"
         ></video>
         
-        <img *ngIf="capturedImage && !isCameraActive" [src]="capturedImage" class="img-preview" />
+        <img *ngIf="capturedImage && !isCameraActive" [src]="capturedImage" class="img-preview w-full h-full object-contain" />
         
-        <div *ngIf="!capturedImage && !isCameraActive" class="placeholder py-8">
-          <span class="material-icons text-5xl text-gray-300">photo_camera</span>
-          <p class="text-sm text-gray-500 mt-2 font-medium">Cámara lista</p>
+        <div *ngIf="!capturedImage && !isCameraActive" class="placeholder py-8 text-center">
+          <span class="material-icons text-5xl text-gray-400">photo_camera</span>
+          <p class="text-sm text-gray-300 mt-2 font-medium">
+            {{ errorMessage ? errorMessage : 'Cámara lista' }}
+          </p>
+        </div>
+
+        <div *ngIf="isLoading" class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-40">
+          <span class="material-icons animate-spin text-4xl mb-2">sync</span>
+          <p class="text-xs font-semibold">Iniciando cámara...</p>
         </div>
 
         <!-- Shutter Overlay Effect -->
@@ -35,6 +43,7 @@ import { ButtonComponent } from '../button/button.component';
 
       <!-- Controls -->
       <div class="controls flex flex-wrap gap-3 mt-6 justify-center">
+        <!-- Live WebRTC Camera Toggle -->
         <app-button 
           *ngIf="!isCameraActive" 
           (click)="startCamera()"
@@ -42,8 +51,19 @@ import { ButtonComponent } from '../button/button.component';
           customClasses="flex items-center gap-2 px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 font-bold"
         >
           <span class="material-icons">videocam</span>
-          {{ capturedImage ? 'Cambiar Foto' : 'Abrir Cámara' }}
+          {{ capturedImage ? 'Reabrir Cámara' : 'Abrir Cámara En Vivo' }}
         </app-button>
+
+        <!-- Native Mobile Camera Trigger (Fail-safe for iOS/Android PWA) -->
+        <button 
+          *ngIf="!isCameraActive"
+          (click)="nativeCameraInput.click()"
+          type="button"
+          class="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-600/20 transition text-sm"
+        >
+          <span class="material-icons">camera_alt</span>
+          Cámara Nativa (Dispositivo)
+        </button>
 
         <app-button 
           *ngIf="isCameraActive" 
@@ -52,7 +72,7 @@ import { ButtonComponent } from '../button/button.component';
           customClasses="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 border-none px-6 py-3 rounded-xl shadow-lg shadow-orange-500/20 font-bold"
         >
           <span class="material-icons">photo_camera</span>
-          Capturar
+          Capturar Foto
         </app-button>
 
         <app-button 
@@ -62,17 +82,27 @@ import { ButtonComponent } from '../button/button.component';
           customClasses="flex items-center gap-2 px-6 py-3 rounded-xl font-bold"
         >
           <span class="material-icons">stop</span>
-          Finalizar
+          Cerrar Cámara
         </app-button>
 
         <label 
           *ngIf="!isCameraActive"
-          class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition text-sm font-semibold border border-gray-300"
+          class="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm font-semibold border border-gray-300 dark:border-gray-600"
         >
           <span class="material-icons text-sm">file_upload</span>
-          Subir
+          Subir de Galería
           <input type="file" (change)="onFileSelected($event)" accept="image/*" class="hidden" />
         </label>
+
+        <!-- Hidden Native Camera Capture Input -->
+        <input 
+          #nativeCameraInput 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          (change)="onFileSelected($event)" 
+          class="hidden" 
+        />
       </div>
 
       <canvas #captureCanvas class="hidden"></canvas>
@@ -81,12 +111,6 @@ import { ButtonComponent } from '../button/button.component';
   styles: [`
     .media-capture-container {
       @apply w-full mx-auto;
-    }
-    .preview-box {
-      @apply aspect-[4/3] w-full bg-black rounded-lg overflow-hidden flex items-center justify-center border-2 border-gray-700;
-    }
-    .video-preview, .img-preview {
-      @apply w-full h-full object-contain;
     }
     .animate-flash {
       animation: flash 0.15s ease-out;
@@ -107,38 +131,65 @@ export class MediaCaptureComponent implements OnDestroy {
 
   capturedImage: string | null = null;
   isCameraActive = false;
+  isLoading = false;
   isCapturing = false;
+  errorMessage: string | null = null;
   private stream: MediaStream | null = null;
 
-  async startCamera() {
-    try {
-      if (this.stream) this.stopCamera();
+  constructor(private cdr: ChangeDetectorRef) {}
 
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera by default
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        audio: false 
-      });
-      this.isCameraActive = true;
-      this.capturedImage = null;
-      
-      // Wait for Angular to render the video element after setting isCameraActive = true
-      setTimeout(() => {
-        if (this.videoPlayer) {
-          const video = this.videoPlayer.nativeElement;
-          video.srcObject = this.stream;
-          video.onloadedmetadata = () => {
-            video.play().catch(e => console.error('Error playing video:', e));
-          };
-        }
-      }, 300);
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      alert('Error: No se pudo activar la cámara. Verifique los permisos.');
+  async startCamera() {
+    this.errorMessage = null;
+    this.isLoading = true;
+    if (this.stream) this.stopCamera();
+
+    const constraintsList: MediaStreamConstraints[] = [
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { facingMode: 'environment' }, audio: false },
+      { video: { facingMode: 'user' }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    let acquiredStream: MediaStream | null = null;
+
+    for (const constraint of constraintsList) {
+      try {
+        acquiredStream = await navigator.mediaDevices.getUserMedia(constraint);
+        if (acquiredStream) break;
+      } catch (e) {
+        console.warn('Constraint error on camera getUserMedia:', constraint, e);
+      }
     }
+
+    if (!acquiredStream) {
+      this.isLoading = false;
+      this.errorMessage = 'No se pudo acceder a la cámara. Revisa permisos o usa Cámara Nativa.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.stream = acquiredStream;
+    this.isCameraActive = true;
+    this.capturedImage = null;
+    this.isLoading = false;
+    this.cdr.detectChanges();
+
+    setTimeout(async () => {
+      if (this.videoPlayer && this.videoPlayer.nativeElement) {
+        const video = this.videoPlayer.nativeElement;
+        video.muted = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('autoplay', 'true');
+        video.srcObject = this.stream;
+
+        try {
+          await video.play();
+        } catch (playErr) {
+          console.error('Video play error on mobile:', playErr);
+        }
+      }
+    }, 150);
   }
 
   capturePhoto() {
@@ -148,9 +199,8 @@ export class MediaCaptureComponent implements OnDestroy {
     const video = this.videoPlayer.nativeElement;
     const canvas = this.captureCanvas.nativeElement;
     
-    // Set canvas dimensions to match video stream
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
     
     const context = canvas.getContext('2d');
     if (context) {
@@ -161,13 +211,12 @@ export class MediaCaptureComponent implements OnDestroy {
           const file = new File([blob], `rufe_evidencia_${Date.now()}.jpg`, { type: 'image/jpeg' });
           this.onCapture.emit(file);
           
-          // Show a quick preview of the last capture
-          this.capturedImage = canvas.toDataURL('image/jpeg', 0.7);
+          this.capturedImage = canvas.toDataURL('image/jpeg', 0.85);
           setTimeout(() => {
-             this.capturedImage = null; // Clear preview to show live video again
+             this.capturedImage = null;
           }, 800);
         }
-      }, 'image/jpeg', 0.8);
+      }, 'image/jpeg', 0.85);
 
       setTimeout(() => {
         this.isCapturing = false;
@@ -181,6 +230,7 @@ export class MediaCaptureComponent implements OnDestroy {
       this.stream = null;
     }
     this.isCameraActive = false;
+    this.isLoading = false;
   }
 
   onFileSelected(event: any) {

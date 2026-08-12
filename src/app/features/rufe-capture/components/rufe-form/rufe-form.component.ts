@@ -90,6 +90,13 @@ export class RufeFormComponent implements OnInit {
   tenencia: ICatalogoItemResponse[] = [];
   estadoBien: ICatalogoItemResponse[] = [];
   tipoBien: ICatalogoItemResponse[] = [];
+  personaStates: ICatalogoItemResponse[] = [
+    { id: 1, nombre: 'Vivo / Sin Lesiones' },
+    { id: 2, nombre: 'Herido Leve' },
+    { id: 3, nombre: 'Herido Grave' },
+    { id: 4, nombre: 'Fallecido' },
+    { id: 5, nombre: 'Desaparecido' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -247,7 +254,10 @@ export class RufeFormComponent implements OnInit {
       genero: [null, Validators.required],
       parentesco: [null, Validators.required],
       etnia: [null],
-      telefono: ['']
+      telefono: [''],
+      estadoPersonaId: [1, Validators.required],
+      esFallecido: [false],
+      observacionSalud: ['']
     });
   }
 
@@ -415,7 +425,10 @@ export class RufeFormComponent implements OnInit {
                 genero: p.genero,
                 parentesco: p.parentesco,
                 etnia: p.etnia,
-                telefono: p.telefono
+                telefono: p.telefono,
+                estadoPersonaId: Number(p.estadoPersonaId) || 1,
+                esFallecido: Number(p.estadoPersonaId) === 4 || p.esFallecido || false,
+                observacionSalud: p.observacionSalud || null
               }))
             );
 
@@ -516,7 +529,10 @@ export class RufeFormComponent implements OnInit {
         parentescoId: p.parentesco,
         generoId: p.genero,
         pertenenciaEtnicaId: p.etnia || null,
-        telefono: p.telefono || null
+        telefono: p.telefono || null,
+        estadoPersonaId: Number(p.estadoPersonaId) || 1,
+        esFallecido: Number(p.estadoPersonaId) === 4 || p.esFallecido || false,
+        observacionSalud: p.observacionSalud || null
       })),
       bienesAfectados: [
         {

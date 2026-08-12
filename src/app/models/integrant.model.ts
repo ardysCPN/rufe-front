@@ -13,5 +13,8 @@ export interface IIntegranteLocal {
   genero_id: number;
   fecha_nacimiento: string;
   parentesco_id: number;
+  estado_persona_id?: number;
+  es_fallecido?: boolean;
+  observacion_salud?: string;
   // Add more fields if any
 }
