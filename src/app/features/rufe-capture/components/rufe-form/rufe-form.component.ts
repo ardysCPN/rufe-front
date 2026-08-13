@@ -309,7 +309,10 @@ export class RufeFormComponent implements OnInit {
     const { CameraModalComponent } = await import('../../../../shared/components/modals/camera-modal.component');
     const dialogRef = this.dialog.open(CameraModalComponent, {
       width: '95vw',
-      maxWidth: '800px',
+      maxWidth: '750px',
+      maxHeight: '94dvh',
+      autoFocus: false,
+      panelClass: 'custom-camera-dialog',
       data: {}
     });
 
