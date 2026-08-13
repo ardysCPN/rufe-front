@@ -17,14 +17,22 @@ import {
   ICatalogoTipoBien,
   ICatalogoPertenenciaEtnica,
   ICatalogoEvento,
-  ICatalogoZona
+  ICatalogoZona,
+  SyncStatus
 } from '../../models/catalogs.model';
 import { IRufeLocal } from '../../models/rufe.model';
 import { IIntegranteLocal } from '../../models/integrant.model';
 
-/**
- * Simple meta interface for storing small key/value metadata (e.g. lastSyncTimestamp)
- */
+export interface IEvidenciaLocal {
+  cliente_id: string; // UUID primary key
+  registro_rufe_cliente_id: string; // FK to parent RUFE (or delivery)
+  tipo_evidencia: string; // 'FOTO_CENSO' | 'FOTO_ENTREGA'
+  blob: Blob;
+  mime_type: string;
+  estado_sincronizacion: SyncStatus;
+  fecha_creacion: Date;
+}
+
 interface IMeta {
   key: string;
   value: any;
@@ -37,6 +45,7 @@ export class DatabaseService extends Dexie {
   // --- Tables ---
   rufes!: Table<IRufeLocal, string>; // Primary key is cliente_id (string/UUID)
   integrantes!: Table<IIntegranteLocal, string>; // Primary key is cliente_id (string/UUID)
+  evidencias_locales!: Table<IEvidenciaLocal, string>; // Primary key is cliente_id
 
   // Catalog tables
   catalogos_municipios!: Table<ICatalogoMunicipio, number>;
@@ -52,11 +61,11 @@ export class DatabaseService extends Dexie {
   catalogos_tipo_bien!: Table<ICatalogoTipoBien, number>;
   catalogos_pertenencia_etnica!: Table<ICatalogoPertenenciaEtnica, number>;
   catalogos_eventos!: Table<ICatalogoEvento, number>;
-  eventos_reales!: Table<any, number>; // Eventos reales de la organización
+  eventos_reales!: Table<any, number>;
 
-  // Meta table for small app metadata
-  meta!: Table<IMeta, string>; // Primary key is key (string)
-  menus!: Table<any, number>; // Table for structured menu items
+  // Meta table
+  meta!: Table<IMeta, string>;
+  menus!: Table<any, number>;
 
   private isBrowser: boolean;
   private dbReadyPromise: Promise<void>;
@@ -65,25 +74,23 @@ export class DatabaseService extends Dexie {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
-    super('RufeOfflineDB'); // Database name
+    super('RufeOfflineDB');
     this.isBrowser = isPlatformBrowser(this.platformId);
 
     if (this.isBrowser) {
-      // Use Dexie.Promise instead of native Promise to keep transaction context
       this.dbReadyPromise = new Dexie.Promise(resolve => {
         this.resolveDbReady = resolve;
       });
       this.defineSchema();
       this.openDatabase();
     } else {
-      // In SSR, db is not available
       this.dbReadyPromise = Dexie.Promise.resolve();
       console.log('Skipping IndexedDB initialization on server (SSR).');
     }
   }
 
   private defineSchema(): void {
-    // version 1 schema kept for compatibility
+    // version 1 schema
     this.version(1).stores({
       rufes: '&cliente_id, id, estado_sincronizacion, fecha_creacion_offline',
       integrantes: '&cliente_id, id, registro_rufe_cliente_id, estado_sincronizacion',
@@ -104,9 +111,14 @@ export class DatabaseService extends Dexie {
       meta: '&key'
     });
 
-    // version 2 schema: add menus table
+    // version 2 schema
     this.version(2).stores({
       menus: '&id, nombre, parentId, orden, offline'
+    });
+
+    // version 3 schema: evidencias_locales (storing binary photo blobs for offline sync)
+    this.version(3).stores({
+      evidencias_locales: '&cliente_id, registro_rufe_cliente_id, estado_sincronizacion, tipo_evidencia'
     });
   }
 
@@ -114,13 +126,12 @@ export class DatabaseService extends Dexie {
     try {
       await this.open();
       console.log('IndexedDB database opened and ready.');
-      this.resolveDbReady(); // Signal that the DB is ready
+      this.resolveDbReady();
     } catch (error) {
       console.error('Error opening IndexedDB database:', error);
     }
   }
 
-  // All public methods should await this promise to ensure the DB is open.
   public async ensureDbReady(): Promise<void> {
     if (!this.isBrowser) {
       return Promise.reject('Database operations are not available in SSR.');
@@ -134,10 +145,6 @@ export class DatabaseService extends Dexie {
       console.log('IndexedDB database closed.');
     }
   }
-
-  // ---------- META (last sync, etc.) ----------
-  // Keeping META here as it is very low level, but could also go to a MetaRepository.
-  // For simplicity keeping it here for now as it doesn't clutter as much as the others.
 
   public async setMeta(key: string, value: any): Promise<void> {
     await this.ensureDbReady();
@@ -169,14 +176,13 @@ export class DatabaseService extends Dexie {
     return iso ? new Date(iso) : null;
   }
 
-  // ---------- UTIL / CLEAR ----------
-
   public async clearAllTables(): Promise<void> {
     await this.ensureDbReady();
     try {
       await this.transaction('rw', this.tables, async () => {
         await this.rufes.clear();
         await this.integrantes.clear();
+        await this.evidencias_locales.clear();
         await this.catalogos_municipios.clear();
         await this.catalogos_departamentos.clear();
         await this.catalogos_tipos_documento.clear();

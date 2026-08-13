@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { AdminRepository, User, Role } from '../../../core/repositories/admin.repository';
+import { AdminRepository, User, Role, Organization } from '../../../core/repositories/admin.repository';
+import { AuthService } from '../../../core/services/auth.service';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { SelectComponent } from '../../../shared/components/select/select.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -58,6 +59,17 @@ import { ICatalogoItemResponse } from '../../../models/catalogs.model';
             [required]="true">
           </app-input>
 
+          <!-- Organization Selector for SuperAdmin -->
+          <app-select 
+            *ngIf="isGlobalAdmin"
+            label="Organización / Entidad" 
+            id="organizacionId" 
+            name="organizacionId" 
+            [options]="orgsForSelect"
+            formControlName="organizacionId" 
+            [required]="true">
+          </app-select>
+
           <app-select 
             label="Rol" 
             id="rolId" 
@@ -92,25 +104,35 @@ export class UserFormDialogComponent implements OnInit {
   userForm: FormGroup;
   roles: Role[] = [];
   rolesForSelect: ICatalogoItemResponse[] = [];
+  orgsForSelect: ICatalogoItemResponse[] = [];
+  isGlobalAdmin = false;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<UserFormDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: User | null,
     private adminRepository: AdminRepository,
+    private authService: AuthService,
     private snackBar: MatSnackBar
   ) {
+    const currentUser = this.authService.currentUserValue;
+    this.isGlobalAdmin = currentUser?.rolNombre === 'ADMIN_GLOBAL';
+
     this.userForm = this.fb.group({
       nombreCompleto: [data?.nombreCompleto || '', Validators.required],
       email: [data?.email || '', [Validators.required, Validators.email]],
       password: ['', data ? [] : [Validators.required]],
+      organizacionId: [data?.organizacionId || '', this.isGlobalAdmin ? [Validators.required] : []],
       rolId: [data?.rolId || '', Validators.required],
-      activo: [data?.activo !== false] // Default true
+      activo: [data?.activo !== false]
     });
   }
 
   ngOnInit(): void {
     this.loadRoles();
+    if (this.isGlobalAdmin) {
+      this.loadOrganizations();
+    }
   }
 
   loadRoles() {
@@ -123,9 +145,22 @@ export class UserFormDialogComponent implements OnInit {
     });
   }
 
+  loadOrganizations() {
+    this.adminRepository.getOrganizations().subscribe({
+      next: (data) => {
+        this.orgsForSelect = data.map(o => ({ id: o.id!, nombre: o.nombreOrganizacion }));
+      },
+      error: (err) => console.error('Error loading organizations', err)
+    });
+  }
+
   onSubmit() {
     if (this.userForm.valid) {
-      const userData = this.userForm.value;
+      const userData = { ...this.userForm.value };
+      if (userData.organizacionId) {
+        userData.organizacionId = Number(userData.organizacionId);
+      }
+      
       const obs = this.data
         ? this.adminRepository.updateUser(this.data.id!, userData)
         : this.adminRepository.createUser(userData);
