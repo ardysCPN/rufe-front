@@ -12,6 +12,7 @@ import { environment } from '../../../../../environments/environment';
 import { DateUtils } from '../../../../core/utils/date.utils';
 import { v4 as uuidv4 } from 'uuid';
 
+import { firstValueFrom } from 'rxjs';
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { SelectComponent } from '../../../../shared/components/select/select.component';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -489,14 +490,15 @@ export class RufeFormComponent implements OnInit {
 
   private async uploadAndLinkEvidences(registroRufeId: number) {
     for (const file of this.capturedEvidences) {
+      if (!file) continue;
       try {
-        const uploadRes = await this.evidenceService.uploadFile(file).toPromise();
+        const uploadRes = await firstValueFrom(this.evidenceService.uploadFile(file));
         if (uploadRes && uploadRes.url) {
-          await this.evidenceService.linkToRufe({
+          await firstValueFrom(this.evidenceService.linkToRufe({
             registroRufeId,
             fotoUrl: uploadRes.url,
             tipoEvidencia: 'FOTO_CENSO'
-          }).toPromise();
+          }));
         }
       } catch (err) {
         console.error('Error subiendo evidencia:', err);
