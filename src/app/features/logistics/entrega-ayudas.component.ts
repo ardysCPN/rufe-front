@@ -81,10 +81,9 @@ import { InputComponent } from '../../shared/components/input/input.component';
                  <span class="material-icons text-purple-600">photo_library</span>
                  Evidencia de Entrega
               </h3>
+                         <app-media-capture (onCaptureListChange)="onCaptureListChange($event)" (onReset)="onReset()"></app-media-capture>
               
-              <app-media-capture (onCapture)="onCapture($event)" (onReset)="onReset()"></app-media-capture>
-              
-              <p class="text-[10px] text-gray-500 mt-2 text-center">Capture una foto del beneficiario recibiendo la ayuda o el acta firmada.</p>
+              <p class="text-[10px] text-gray-500 mt-2 text-center">Capture una o varias fotos del beneficiario recibiendo la ayuda (máx 5 fotos).</p>
            </div>
 
            <div class="flex justify-end pt-4">
@@ -112,7 +111,7 @@ export class EntregaAyudasComponent implements OnInit {
   selectedRufeId: number | null = null;
   selectedInventoryId: number | null = null;
   deliveryAmount: number = 1;
-  capturedFile: File | null = null;
+  capturedFiles: File[] = [];
 
   // Auxiliary
   rufeInfo: IRufeRemote | null = null;
@@ -172,11 +171,15 @@ export class EntregaAyudasComponent implements OnInit {
   }
 
   onCapture(file: File) {
-    this.capturedFile = file;
+    this.capturedFiles.push(file);
+  }
+
+  onCaptureListChange(files: File[]) {
+    this.capturedFiles = files;
   }
 
   onReset() {
-    this.capturedFile = null;
+    this.capturedFiles = [];
   }
 
   get isValid(): boolean {
@@ -189,8 +192,8 @@ export class EntregaAyudasComponent implements OnInit {
     this.isSubmitting = true;
     try {
       let photoUrl = '';
-      if (this.capturedFile) {
-        const uploadRes = await this.evidenceService.uploadFile(this.capturedFile, 'entregas').toPromise();
+      if (this.capturedFiles.length > 0) {
+        const uploadRes = await this.evidenceService.uploadFile(this.capturedFiles[0], 'entregas').toPromise();
         photoUrl = uploadRes.url;
       }
 
@@ -210,12 +213,11 @@ export class EntregaAyudasComponent implements OnInit {
       this.isSubmitting = false;
     }
   }
-
   resetForm() {
      this.selectedRufeId = null;
      this.selectedInventoryId = null;
      this.deliveryAmount = 1;
-     this.capturedFile = null;
+     this.capturedFiles = [];
      this.rufeInfo = null;
      this.selectedItemStock = null;
      this.loadInventory(); // Refresh stock levels

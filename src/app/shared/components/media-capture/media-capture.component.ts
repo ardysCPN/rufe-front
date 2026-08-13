@@ -10,6 +10,22 @@ import { ButtonComponent } from '../button/button.component';
   imports: [CommonModule, ButtonComponent],
   template: `
     <div class="media-capture-container overflow-hidden">
+      <!-- Status & Counter Header -->
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {{ label }} ({{ capturedFiles.length }} / {{ maxPhotos }} fotos)
+        </span>
+        <span 
+          class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+          [class.bg-emerald-100]="capturedFiles.length < maxPhotos"
+          [class.text-emerald-800]="capturedFiles.length < maxPhotos"
+          [class.bg-amber-100]="capturedFiles.length >= maxPhotos"
+          [class.text-amber-800]="capturedFiles.length >= maxPhotos"
+        >
+          {{ capturedFiles.length >= maxPhotos ? 'Límite alcanzado' : 'Disponible' }}
+        </span>
+      </div>
+
       <!-- Preview Area -->
       <div class="preview-box relative group bg-black min-h-[300px] rounded-xl overflow-hidden flex items-center justify-center border-2 border-gray-700">
         <video 
@@ -42,24 +58,26 @@ import { ButtonComponent } from '../button/button.component';
       </div>
 
       <!-- Controls -->
-      <div class="controls flex flex-wrap gap-3 mt-6 justify-center">
+      <div class="controls flex flex-wrap gap-3 mt-4 justify-center">
         <!-- Live WebRTC Camera Toggle -->
         <app-button 
           *ngIf="!isCameraActive" 
           (click)="startCamera()"
+          [disabled]="capturedFiles.length >= maxPhotos"
           variant="primary"
           customClasses="flex items-center gap-2 px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 font-bold"
         >
           <span class="material-icons">videocam</span>
-          {{ capturedImage ? 'Reabrir Cámara' : 'Abrir Cámara En Vivo' }}
+          {{ capturedFiles.length > 0 ? 'Tomar Otra Foto' : 'Abrir Cámara En Vivo' }}
         </app-button>
 
-        <!-- Native Mobile Camera Trigger (Fail-safe for iOS/Android PWA) -->
+        <!-- Native Mobile Camera Trigger -->
         <button 
           *ngIf="!isCameraActive"
           (click)="nativeCameraInput.click()"
+          [disabled]="capturedFiles.length >= maxPhotos"
           type="button"
-          class="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-600/20 transition text-sm"
+          class="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-600/20 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="material-icons">camera_alt</span>
           Cámara Nativa (Dispositivo)
@@ -68,6 +86,7 @@ import { ButtonComponent } from '../button/button.component';
         <app-button 
           *ngIf="isCameraActive" 
           (click)="capturePhoto()"
+          [disabled]="capturedFiles.length >= maxPhotos"
           variant="primary"
           customClasses="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 border-none px-6 py-3 rounded-xl shadow-lg shadow-orange-500/20 font-bold"
         >
@@ -86,7 +105,7 @@ import { ButtonComponent } from '../button/button.component';
         </app-button>
 
         <label 
-          *ngIf="!isCameraActive"
+          *ngIf="!isCameraActive && capturedFiles.length < maxPhotos"
           class="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm font-semibold border border-gray-300 dark:border-gray-600"
         >
           <span class="material-icons text-sm">file_upload</span>
@@ -103,6 +122,46 @@ import { ButtonComponent } from '../button/button.component';
           (change)="onFileSelected($event)" 
           class="hidden" 
         />
+      </div>
+
+      <!-- Captured Photos Thumbnail Gallery Grid -->
+      <div *ngIf="capturedPreviews.length > 0" class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h4 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">
+          Fotos Adjuntadas ({{ capturedPreviews.length }})
+        </h4>
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <div 
+            *ngFor="let preview of capturedPreviews; let i = index" 
+            class="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-900"
+          >
+            <img 
+              [src]="preview" 
+              (click)="openPreviewModal(preview)" 
+              class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform" 
+            />
+            <button 
+              (click)="removePhoto(i)" 
+              type="button" 
+              title="Eliminar foto"
+              class="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-90 hover:opacity-100 hover:scale-110 transition shadow"
+            >
+              <span class="material-icons text-xs block">delete</span>
+            </button>
+            <span class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded font-bold">
+              #{{ i + 1 }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fullscreen Image Preview Modal -->
+      <div *ngIf="selectedPreview" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" (click)="selectedPreview = null">
+        <div class="relative max-w-4xl max-h-[90vh]" (click)="$event.stopPropagation()">
+          <img [src]="selectedPreview" class="max-w-full max-h-[85vh] rounded-lg object-contain" />
+          <button (click)="selectedPreview = null" class="absolute top-2 right-2 p-2 bg-white/20 text-white rounded-full hover:bg-white/40">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
       </div>
 
       <canvas #captureCanvas class="hidden"></canvas>
@@ -122,14 +181,20 @@ import { ButtonComponent } from '../button/button.component';
   `]
 })
 export class MediaCaptureComponent implements OnDestroy {
-  @Input() label: string = 'Evidencia';
+  @Input() label: string = 'Evidencia Fotográfica';
+  @Input() maxPhotos: number = 5;
   @Output() onCapture = new EventEmitter<File>();
+  @Output() onCaptureListChange = new EventEmitter<File[]>();
   @Output() onReset = new EventEmitter<void>();
 
   @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
   @ViewChild('captureCanvas') captureCanvas!: ElementRef<HTMLCanvasElement>;
 
+  capturedFiles: File[] = [];
+  capturedPreviews: string[] = [];
   capturedImage: string | null = null;
+  selectedPreview: string | null = null;
+
   isCameraActive = false;
   isLoading = false;
   isCapturing = false;
@@ -139,6 +204,11 @@ export class MediaCaptureComponent implements OnDestroy {
   constructor(private cdr: ChangeDetectorRef) {}
 
   async startCamera() {
+    if (this.capturedFiles.length >= this.maxPhotos) {
+      alert(`Ha alcanzado el límite máximo de ${this.maxPhotos} fotografías por registro.`);
+      return;
+    }
+
     this.errorMessage = null;
     this.isLoading = true;
     if (this.stream) this.stopCamera();
@@ -195,6 +265,12 @@ export class MediaCaptureComponent implements OnDestroy {
   capturePhoto() {
     if (!this.videoPlayer || !this.captureCanvas || !this.stream) return;
 
+    if (this.capturedFiles.length >= this.maxPhotos) {
+      alert(`Límite de ${this.maxPhotos} fotos alcanzado.`);
+      this.stopCamera();
+      return;
+    }
+
     this.isCapturing = true;
     const video = this.videoPlayer.nativeElement;
     const canvas = this.captureCanvas.nativeElement;
@@ -209,12 +285,18 @@ export class MediaCaptureComponent implements OnDestroy {
       canvas.toBlob((blob) => {
         if (blob) {
           const file = new File([blob], `rufe_evidencia_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          this.capturedFiles.push(file);
+          this.capturedPreviews.push(previewUrl);
+          this.capturedImage = previewUrl;
+
           this.onCapture.emit(file);
-          
-          this.capturedImage = canvas.toDataURL('image/jpeg', 0.85);
-          setTimeout(() => {
-             this.capturedImage = null;
-          }, 800);
+          this.onCaptureListChange.emit(this.capturedFiles);
+
+          if (this.capturedFiles.length >= this.maxPhotos) {
+            this.stopCamera();
+          }
         }
       }, 'image/jpeg', 0.85);
 
@@ -222,6 +304,23 @@ export class MediaCaptureComponent implements OnDestroy {
         this.isCapturing = false;
       }, 150);
     }
+  }
+
+  removePhoto(index: number) {
+    if (index >= 0 && index < this.capturedFiles.length) {
+      this.capturedFiles.splice(index, 1);
+      this.capturedPreviews.splice(index, 1);
+      if (this.capturedPreviews.length > 0) {
+        this.capturedImage = this.capturedPreviews[this.capturedPreviews.length - 1];
+      } else {
+        this.capturedImage = null;
+      }
+      this.onCaptureListChange.emit(this.capturedFiles);
+    }
+  }
+
+  openPreviewModal(previewUrl: string) {
+    this.selectedPreview = previewUrl;
   }
 
   stopCamera() {
@@ -234,21 +333,34 @@ export class MediaCaptureComponent implements OnDestroy {
   }
 
   onFileSelected(event: any) {
+    if (this.capturedFiles.length >= this.maxPhotos) {
+      alert(`Límite máximo de ${this.maxPhotos} fotos alcanzado.`);
+      return;
+    }
+
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e: any) => {
-        this.capturedImage = e.target.result;
+        const previewUrl = e.target.result;
+        this.capturedFiles.push(file);
+        this.capturedPreviews.push(previewUrl);
+        this.capturedImage = previewUrl;
+
         this.onCapture.emit(file);
+        this.onCaptureListChange.emit(this.capturedFiles);
       };
       reader.readAsDataURL(file);
     }
   }
 
   reset() {
+    this.capturedFiles = [];
+    this.capturedPreviews = [];
     this.capturedImage = null;
     this.isCameraActive = false;
     this.onReset.emit();
+    this.onCaptureListChange.emit([]);
   }
 
   ngOnDestroy() {

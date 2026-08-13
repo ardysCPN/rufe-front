@@ -396,7 +396,7 @@ export class RufeFormComponent implements OnInit {
 
         if (!sentToServer) {
           try {
-            await this.rufeRepository.saveRufeWithIntegrantes(
+            await this.rufeRepository.saveRufeWithIntegrantesAndEvidencias(
               {
                 departamentoId: rufeValue.departamento,
                 municipioId: rufeValue.municipio,
@@ -429,7 +429,8 @@ export class RufeFormComponent implements OnInit {
                 estadoPersonaId: Number(p.estadoPersonaId) || 1,
                 esFallecido: Number(p.estadoPersonaId) === 4 || p.esFallecido || false,
                 observacionSalud: p.observacionSalud || null
-              }))
+              })),
+              this.capturedEvidences
             );
 
             this.showSuccessModal('Guardado Offline', 'No hay conexión o el servidor no respondió. El formulario se guardó localmente y se sincronizará luego.');

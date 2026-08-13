@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { NetworkService } from './network.service';
 import { RufeRepository } from '../repositories/rufe.repository';
 import { environment } from '../../../environments/environment';
-import { IRufeLocal, IIntegranteLocal } from '../../models/rufe.model';
+import { IRufeLocal } from '../../models/rufe.model';
 import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
@@ -24,16 +24,14 @@ export class SyncService {
     this.network.isOnline$.subscribe(async isOnline => {
       if (isOnline) {
         console.log('📡 Red detectada. Verificando sesión antes de sincronizar...');
-        // Verificar validez del token antes de intentar sincronizar para evitar 401
         const isValidSession = await firstValueFrom(this.authService.validateTokenAndKeepAlive());
 
         if (isValidSession) {
           console.log('✅ Sesión válida. Iniciando sincronización...');
           this.syncPending();
         } else {
-          console.warn('⚠️ Sesión expirada o inválida al reconectar. No se puede sincronizar automáticamente. Se requiere re-autenticación.');
-          // Opcional: Notificar al usuario o redirigir a login si es la política
-          this.snackBar.open('Conexión detectada pero tu sesión ha expirado. Por favor inicia sesión nuevamente para sincronizar.', 'Cerrar', {
+          console.warn('⚠️ Sesión expirada o inválida al reconectar. No se puede sincronizar automáticamente.');
+          this.snackBar.open('Conexión detectada pero tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'Cerrar', {
             duration: 8000,
             panelClass: ['snackbar-warn']
           });
@@ -49,51 +47,78 @@ export class SyncService {
     try {
       const pendingRufes = await this.rufeRepository.getPendingSyncRufes();
 
-      // Note: We currently only sync full RUFE trees for simplicity and consistency
-      // If there are standalone pending integrantes, logic might need to be added to find their parent and sync.
-
       if (pendingRufes.length === 0) {
         this.syncing = false;
         return;
       }
 
-      console.log('⏫ Sincronizando...', { pendingRufes });
+      console.log('⏫ Sincronizando registros RUFE pendientes...', { count: pendingRufes.length });
       let hasErrors = false;
 
-      // Sync Rufes (and their children)
       for (const r of pendingRufes) {
         try {
-          // 1. Fetch children
+          // 1. Obtener integrantes del hogar local
           const integrantes = await this.rufeRepository.getIntegrantesByRufe(r.cliente_id);
 
-          // 2. Map to Backend Payload
+          // 2. Mapear objeto a payload para backend
           const payload = this.mapRufeToPayload(r, integrantes);
-          console.log('Sending Payload:', payload);
+          console.log('Enviando Payload RUFE:', payload);
 
-          // 3. Send
-          await firstValueFrom(this.http.post(`${this.apiUrl}/rufe`, payload));
+          // 3. Enviar RUFE al servidor
+          const response: any = await firstValueFrom(this.http.post(`${this.apiUrl}/rufe`, payload));
+          const createdRufeId = response?.id;
 
-          // 4. Update Status on success
+          // 4. Actualizar estado local a sincronizado
           await this.rufeRepository.updateRufe(r.cliente_id, { estado_sincronizacion: 'sincronizado' });
           for (const int of integrantes) {
             await this.rufeRepository.updateIntegrante(int.cliente_id, { estado_sincronizacion: 'sincronizado' });
           }
 
+          // 5. Sincronizar evidencias fotográficas locales
+          if (createdRufeId) {
+            const pendingEvidencias = await this.rufeRepository.getEvidenciasByRufe(r.cliente_id);
+            for (const ev of pendingEvidencias) {
+              if (ev.estado_sincronizacion !== 'sincronizado' && ev.blob) {
+                try {
+                  const formData = new FormData();
+                  const filename = `rufe_${r.cliente_id}_${Date.now()}.jpg`;
+                  const fileToUpload = new File([ev.blob], filename, { type: ev.mime_type || 'image/jpeg' });
+                  formData.append('file', fileToUpload);
+                  formData.append('subFolder', 'censos');
+
+                  const uploadRes: any = await firstValueFrom(this.http.post(`${this.apiUrl}/evidences/upload`, formData));
+                  if (uploadRes && uploadRes.url) {
+                    await firstValueFrom(this.http.post(`${this.apiUrl}/rufe/evidencias`, {
+                      registroRufeId: createdRufeId,
+                      fotoUrl: uploadRes.url,
+                      tipoEvidencia: ev.tipo_evidencia || 'FOTO_CENSO'
+                    }));
+                    await this.rufeRepository.updateEvidenciaStatus(ev.cliente_id, 'sincronizado');
+                    console.log('✅ Foto de evidencia sincronizada:', uploadRes.url);
+                  }
+                } catch (photoErr) {
+                  console.error('Error sincronizando foto de evidencia:', photoErr);
+                  hasErrors = true;
+                }
+              }
+            }
+          }
+
         } catch (err) {
-          console.error('Error al sincronizar RUFE', r, err);
+          console.error('Error al sincronizar RUFE:', r, err);
           hasErrors = true;
         }
       }
 
       if (hasErrors) {
-        this.snackBar.open('Sincronización completada con algunos errores.', 'Cerrar', {
+        this.snackBar.open('Sincronización completada con algunas observaciones.', 'Cerrar', {
           duration: 5000, panelClass: ['snackbar-warn']
         });
       } else {
-        this.snackBar.open('Sincronización completada exitosamente.', 'Cerrar', {
+        this.snackBar.open('Sincronización de datos y fotografías completada exitosamente.', 'Cerrar', {
           duration: 4000, panelClass: ['snackbar-success']
         });
-        console.log('✅ Sincronización completada.');
+        console.log('✅ Sincronización completada con éxito.');
       }
 
     } catch (e) {
@@ -110,44 +135,39 @@ export class SyncService {
     return {
       clienteId: rufe.cliente_id,
       eventoId: rufe.eventoId,
-      tipoEventoId: rufe.tipoEventoId, // Mapped
+      tipoEventoId: rufe.tipoEventoId,
       fechaRegistro: rufe.fechaRufe || new Date().toISOString(),
-      // Mapping fields to match Postman expectations (Suffix 'Id' for foreign keys)
-      // Assuming form stores IDs in these fields. 
-      // If values are strings/objects, they need parsing. Assuming simple ID numbers/strings.
-      tipoUbicacionBienId: rufe.ubicacionTipo === 'urbano' ? 1 : 2, // Correct mapping logic from form
+      tipoUbicacionBienId: rufe.ubicacionTipo === 'urbano' ? 1 : 2,
       corregimiento: rufe.corregimiento,
       veredaSectorBarrio: rufe.veredaSectorBarrio,
       direccion: rufe.direccion,
-      tipoAlojamientoActualId: Number(rufe.alojamientoActual),
-      // formaTenenciaBienId: Number(rufe.formaTenencia), // Adjust based on actual Model vs Postman
-      // estadoBienId: Number(rufe.estadoBien),
-      // Mapped lists:
+      tipoAlojamientoActualId: Number(rufe.alojamientoActual) || 1,
       integrantes: integrantes.map(i => ({
         clienteId: i.cliente_id,
         nombres: i.nombres,
         apellidos: i.apellidos,
-        tipoDocumentoId: Number(i.tipoDocumento),
+        tipoDocumentoId: Number(i.tipoDocumento) || 1,
         numeroDocumento: i.numeroDocumento,
         fechaNacimiento: i.fechaNacimiento,
-        parentescoId: Number(i.parentesco),
-        generoId: Number(i.genero),
-        pertenenciaEtnicaId: Number(i.etnia),
+        parentescoId: Number(i.parentesco) || 1,
+        generoId: Number(i.genero) || 1,
+        pertenenciaEtnicaId: Number(i.etnia) || 1,
+        estadoPersonaId: Number(i.estado_persona_id || i.estadoPersonaId) || 1,
+        observacionSalud: i.observacion_salud || i.observacionSalud || '',
         telefono: i.telefono
       })),
-      // Placeholder for other lists if they exist in DB but not yet in this sync logic
       bienesAfectados: [
         {
-          clienteId: uuidv4(), // Generate or use if tracking bienes
-          tipoBienId: Number(rufe.tipoBien),
-          formaTenenciaBienId: Number(rufe.formaTenencia),
-          estadoBienId: Number(rufe.estadoBien)
+          clienteId: uuidv4(),
+          tipoBienId: Number(rufe.tipoBien) || 1,
+          formaTenenciaBienId: Number(rufe.formaTenencia) || 1,
+          estadoBienId: Number(rufe.estadoBien) || 1
         }
       ],
       activosAgropecuarios: rufe.cantidadPecuaria ? [
         {
           clienteId: uuidv4(),
-          sector: 'PECUARIO', // Infer based on form
+          sector: 'PECUARIO',
           especieAnimal: rufe.especie,
           cantidadAnimal: rufe.cantidadPecuaria
         }
@@ -156,7 +176,6 @@ export class SyncService {
   }
 }
 
-// Simple UUID generator for the placeholder items if needed, though they should ideally come from DB
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);

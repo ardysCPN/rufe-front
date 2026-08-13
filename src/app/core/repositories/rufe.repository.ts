@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { v4 as uuidv4 } from 'uuid';
-import { DatabaseService } from '../services/database.service';
+import { DatabaseService, IEvidenciaLocal } from '../services/database.service';
 import { IRufeLocal } from '../../models/rufe.model';
 import { SyncStatus } from '../../models/catalogs.model';
 import { IIntegranteLocal } from '../../models/integrant.model';
@@ -12,10 +12,6 @@ export class RufeRepository {
 
     constructor(private db: DatabaseService) { }
 
-    /**
-     * Add a RUFE record to the local DB. Generates cliente_id + sets pending sync status.
-     * Returns the cliente_id (string).
-     */
     public async addRufe(rufe: Omit<IRufeLocal, 'cliente_id' | 'estado_sincronizacion' | 'fecha_creacion_offline' | 'fecha_ultima_actualizacion_offline'>): Promise<string> {
         const newRufe: IRufeLocal = {
             ...rufe,
@@ -34,27 +30,19 @@ export class RufeRepository {
         }
     }
 
-    /**
-     * Transactional save: RUFE + sus integrantes en una sola transacción.
-     * Devuelve cliente_id del RUFE creado.
-     */
     public async saveRufeWithIntegrantes(
         rufe: Omit<IRufeLocal, 'cliente_id' | 'estado_sincronizacion' | 'fecha_creacion_offline' | 'fecha_ultima_actualizacion_offline'>,
         integrantes: Omit<IIntegranteLocal, 'cliente_id' | 'estado_sincronizacion' | 'registro_rufe_cliente_id'>[]
     ): Promise<string> {
+        return this.saveRufeWithIntegrantesAndEvidencias(rufe, integrantes, []);
+    }
 
-        // Validar duplicados por hash simple o consulta compuesta (ej: evento + documento del primer integrante)
-        // Por ahora, asumimos que el frontend controla el botón, pero aquí agregamos una defensa extra si cliente_id viniera del front.
-        // Como cliente_id se genera aquí, la idempotencia debe basarse en el contenido.
-        // E.g. Check if any RUFE with same fechaRufe & direccion & eventoId exists created in the last minute?
-        // Or simpler: The frontend now blocks multiple clicks.
-
-        // Simpler check: If we passed a specific ID from frontend (which we don't currently), we'd check that.
-        // For strict idempotency without frontend ID, we'd need a unique business key.
-        // Let's implement a quick check for identical recent entry to be safe.
-        // (Skipping complex logic to avoid performance hit on slow devices, relying on UI block + below transaction)
-
-        return this.db.transaction('rw', this.db.rufes, this.db.integrantes, () => {
+    public async saveRufeWithIntegrantesAndEvidencias(
+        rufe: Omit<IRufeLocal, 'cliente_id' | 'estado_sincronizacion' | 'fecha_creacion_offline' | 'fecha_ultima_actualizacion_offline'>,
+        integrantes: Omit<IIntegranteLocal, 'cliente_id' | 'estado_sincronizacion' | 'registro_rufe_cliente_id'>[],
+        evidenciasFiles: File[] = []
+    ): Promise<string> {
+        return this.db.transaction('rw', this.db.rufes, this.db.integrantes, this.db.evidencias_locales, async () => {
             const generatedRufeId = uuidv4();
 
             const newRufe: IRufeLocal = {
@@ -65,28 +53,33 @@ export class RufeRepository {
                 fecha_ultima_actualizacion_offline: new Date()
             };
 
-            // Return the Promise chain explicitly
-            return this.db.rufes.add(newRufe).then(() => {
-                if (integrantes && integrantes.length > 0) {
-                    const integrantesToSave: IIntegranteLocal[] = integrantes.map(i => ({
-                        ...i,
-                        cliente_id: uuidv4(),
-                        registro_rufe_cliente_id: generatedRufeId,
-                        estado_sincronizacion: 'pendiente_crear' as SyncStatus
-                    }));
-                    return this.db.integrantes.bulkAdd(integrantesToSave);
-                }
-                return; // Return void promise if no integrantes
-            }).then(() => {
-                return generatedRufeId; // Resolve with the ID
-            });
-        });
+            await this.db.rufes.add(newRufe);
 
-        // Note: The logging below will happen after the transaction promise resolves in the caller.
-        // We can't log 'rufeId' here easily inside the method without awaiting the transaction result.
-        // Removing the log or moving it to .then() of the transaction if needed, but for now we simplify.
-        // console.log(`RUFE guardado...`); 
-        // Returning the promise from transaction directly.
+            if (integrantes && integrantes.length > 0) {
+                const integrantesToSave: IIntegranteLocal[] = integrantes.map(i => ({
+                    ...i,
+                    cliente_id: uuidv4(),
+                    registro_rufe_cliente_id: generatedRufeId,
+                    estado_sincronizacion: 'pendiente_crear' as SyncStatus
+                }));
+                await this.db.integrantes.bulkAdd(integrantesToSave);
+            }
+
+            if (evidenciasFiles && evidenciasFiles.length > 0) {
+                const evidenciasToSave: IEvidenciaLocal[] = evidenciasFiles.map(file => ({
+                    cliente_id: uuidv4(),
+                    registro_rufe_cliente_id: generatedRufeId,
+                    tipo_evidencia: 'FOTO_CENSO',
+                    blob: file,
+                    mime_type: file.type || 'image/jpeg',
+                    estado_sincronizacion: 'pendiente_crear' as SyncStatus,
+                    fecha_creacion: new Date()
+                }));
+                await this.db.evidencias_locales.bulkAdd(evidenciasToSave);
+            }
+
+            return generatedRufeId;
+        });
     }
 
     public async getRufe(clienteId: string): Promise<IRufeLocal | undefined> {
@@ -107,11 +100,6 @@ export class RufeRepository {
         }
     }
 
-    /**
-     * Update RUFE and mark state accordingly:
-     * - if was 'sincronizado' -> set 'pendiente_actualizar'
-     * - always update fecha_ultima_actualizacion_offline
-     */
     public async updateRufe(clienteId: string, changes: Partial<IRufeLocal>): Promise<number> {
         try {
             const existingRufe = await this.db.rufes.get(clienteId);
@@ -120,7 +108,6 @@ export class RufeRepository {
             }
             changes.fecha_ultima_actualizacion_offline = new Date();
             const updatedCount = await this.db.rufes.update(clienteId, changes);
-            console.log(`Registro RUFE ${clienteId} actualizado: ${updatedCount} fila(s) afectadas.`, changes);
             return updatedCount;
         } catch (error) {
             console.error('Error al actualizar registro RUFE:', error);
@@ -128,22 +115,15 @@ export class RufeRepository {
         }
     }
 
-    /**
-     * Soft-delete or hard-delete RUFE depending on sync state:
-     * - if already sincronizado -> marcar 'pendiente_eliminar'
-     * - else -> eliminar localmente
-     */
     public async deleteRufe(clienteId: string): Promise<void> {
         try {
             const existingRufe = await this.db.rufes.get(clienteId);
             if (existingRufe && existingRufe.estado_sincronizacion === 'sincronizado') {
                 await this.db.rufes.update(clienteId, { estado_sincronizacion: 'pendiente_eliminar' as SyncStatus });
-                console.log(`Registro RUFE ${clienteId} marcado para eliminación.`);
             } else {
                 await this.db.rufes.delete(clienteId);
-                // Also remove related integrantes
                 await this.db.integrantes.where('registro_rufe_cliente_id').equals(clienteId).delete();
-                console.log(`Registro RUFE ${clienteId} eliminado directamente de IndexedDB junto con sus integrantes.`);
+                await this.db.evidencias_locales.where('registro_rufe_cliente_id').equals(clienteId).delete();
             }
         } catch (error) {
             console.error('Error al eliminar registro RUFE:', error);
@@ -151,9 +131,6 @@ export class RufeRepository {
         }
     }
 
-    /**
-     * Query RUFE records pending synchronization (create/update/delete).
-     */
     public async getPendingSyncRufes(): Promise<IRufeLocal[]> {
         try {
             return await this.db.rufes
@@ -213,9 +190,7 @@ export class RufeRepository {
             if (existing && existing.estado_sincronizacion === 'sincronizado') {
                 changes.estado_sincronizacion = 'pendiente_actualizar' as SyncStatus;
             }
-            const updated = await this.db.integrantes.update(clienteId, changes);
-            console.log(`Integrante ${clienteId} actualizado: ${updated}`);
-            return updated;
+            return await this.db.integrantes.update(clienteId, changes);
         } catch (error) {
             console.error('Error al actualizar integrante:', error);
             throw error;
@@ -227,10 +202,8 @@ export class RufeRepository {
             const existing = await this.db.integrantes.get(clienteId);
             if (existing && existing.estado_sincronizacion === 'sincronizado') {
                 await this.db.integrantes.update(clienteId, { estado_sincronizacion: 'pendiente_eliminar' as SyncStatus });
-                console.log(`Integrante ${clienteId} marcado para eliminación.`);
             } else {
                 await this.db.integrantes.delete(clienteId);
-                console.log(`Integrante ${clienteId} eliminado localmente.`);
             }
         } catch (error) {
             console.error('Error al eliminar integrante:', error);
@@ -247,6 +220,41 @@ export class RufeRepository {
         } catch (error) {
             console.error('Error al obtener integrantes pendientes de sincronización:', error);
             return [];
+        }
+    }
+
+    // ---------- EVIDENCIAS OFFLINE CRUD ----------
+
+    public async getEvidenciasByRufe(rufeClienteId: string): Promise<IEvidenciaLocal[]> {
+        try {
+            return await this.db.evidencias_locales
+                .where('registro_rufe_cliente_id')
+                .equals(rufeClienteId)
+                .toArray();
+        } catch (error) {
+            console.error('Error al obtener evidencias locales por RUFE:', error);
+            return [];
+        }
+    }
+
+    public async getPendingSyncEvidencias(): Promise<IEvidenciaLocal[]> {
+        try {
+            return await this.db.evidencias_locales
+                .where('estado_sincronizacion')
+                .equals('pendiente_crear')
+                .toArray();
+        } catch (error) {
+            console.error('Error al obtener evidencias pendientes de sincronización:', error);
+            return [];
+        }
+    }
+
+    public async updateEvidenciaStatus(clienteId: string, status: SyncStatus): Promise<number> {
+        try {
+            return await this.db.evidencias_locales.update(clienteId, { estado_sincronizacion: status });
+        } catch (error) {
+            console.error('Error al actualizar estado de evidencia:', error);
+            throw error;
         }
     }
 }
