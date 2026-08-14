@@ -6,13 +6,59 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import http from 'node:http';
+import https from 'node:https';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
-// Add body-parser middleware for the proxy to work with POST/PUT requests
+/**
+ * Proxy API requests to the internal backend service.
+ * Using native streaming http.request to transparently forward JSON, Multipart/FormData, and binary uploads
+ * without corrupting boundaries or buffering large files in memory.
+ */
+app.use('/proxy-api', (req, res) => {
+  const backendEnv = process.env['INTERNAL_BACKEND_URL'] || 'http://backend:8080';
+  const backendUrl = new URL(backendEnv);
+
+  // Forward all client headers except host/connection
+  const forwardedHeaders: Record<string, string | string[]> = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value && key !== 'host' && key !== 'connection') {
+      forwardedHeaders[key] = value;
+    }
+  }
+  forwardedHeaders['host'] = backendUrl.host;
+
+  const requestOptions = {
+    protocol: backendUrl.protocol,
+    hostname: backendUrl.hostname,
+    port: backendUrl.port || (backendUrl.protocol === 'https:' ? 443 : 8080),
+    path: req.url, // req.url already has /proxy-api stripped
+    method: req.method,
+    headers: forwardedHeaders,
+  };
+
+  const client = backendUrl.protocol === 'https:' ? https : http;
+  const proxyReq = client.request(requestOptions, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error('Proxy Stream Error:', err);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Proxy Error', detail: 'Internal backend unreachable: ' + err.message });
+    }
+  });
+
+  // Stream client request body directly into proxy request
+  req.pipe(proxyReq, { end: true });
+});
+
+// Body-parser middleware for any other routes (placed after proxy-api)
 app.use(express.json());
 
 /**
@@ -22,38 +68,6 @@ app.get('/api/config', (req, res) => {
   res.json({
     apiUrl: process.env['API_URL'] || '/proxy-api'
   });
-});
-
-/**
- * Proxy API requests to the internal backend service.
- * This allows the backend to remain private within the Docker network.
- * Using app.use() instead of app.all() with wildcards to avoid Express 5 routing issues.
- */
-app.use('/proxy-api', async (req, res) => {
-  const backendUrl = process.env['INTERNAL_BACKEND_URL'] || 'http://backend:8080';
-  // With app.use('/proxy-api'), req.url is already stripped of the prefix.
-  const targetUrl = `${backendUrl}${req.url}`;
-
-  try {
-    const response = await fetch(targetUrl, {
-      method: req.method,
-      headers: {
-        'content-type': String(req.headers['content-type'] || 'application/json'),
-        'authorization': String(req.headers['authorization'] || ''),
-        'x-tenant-id': String(req.headers['x-tenant-id'] || ''),
-        'accept': String(req.headers['accept'] || '*/*'),
-      },
-      body: (req.method !== 'GET' && req.method !== 'HEAD') ? JSON.stringify(req.body) : undefined,
-    });
-
-    const data = await response.arrayBuffer();
-    res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
-    res.send(Buffer.from(data));
-  } catch (error) {
-    console.error('Proxy Error:', error);
-    res.status(502).json({ error: 'Proxy Error', detail: 'Internal backend unreachable' });
-  }
 });
 
 /**

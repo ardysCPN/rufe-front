@@ -5,6 +5,7 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminRepository, User, Role, Organization } from '../../../core/repositories/admin.repository';
 import { AuthService } from '../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../core/utils/error.utils';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { SelectComponent } from '../../../shared/components/select/select.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -141,7 +142,11 @@ export class UserFormDialogComponent implements OnInit {
         this.roles = data;
         this.rolesForSelect = data.map(r => ({ id: r.id!, nombre: r.nombreRol }));
       },
-      error: (err) => console.error('Error loading roles', err)
+      error: (err) => {
+        console.error('Error loading roles', err);
+        const msg = extractErrorMessage(err, 'Error al cargar roles');
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      }
     });
   }
 
@@ -150,7 +155,11 @@ export class UserFormDialogComponent implements OnInit {
       next: (data) => {
         this.orgsForSelect = data.map(o => ({ id: o.id!, nombre: o.nombreOrganizacion }));
       },
-      error: (err) => console.error('Error loading organizations', err)
+      error: (err) => {
+        console.error('Error loading organizations', err);
+        const msg = extractErrorMessage(err, 'Error al cargar organizaciones');
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      }
     });
   }
 
@@ -170,14 +179,15 @@ export class UserFormDialogComponent implements OnInit {
           this.snackBar.open(
             `Usuario ${this.data ? 'actualizado' : 'creado'} con éxito`,
             'Cerrar',
-            { duration: 3000, panelClass: ['snackbar-success'] }
+            { duration: 3500, panelClass: ['snackbar-success'] }
           );
           this.dialogRef.close(true);
         },
         error: (err) => {
           console.error('Error saving user', err);
-          this.snackBar.open('Error al guardar el usuario', 'Cerrar', {
-            duration: 5000,
+          const errorMsg = extractErrorMessage(err, 'Error al guardar el usuario');
+          this.snackBar.open(errorMsg, 'Cerrar', {
+            duration: 7000,
             panelClass: ['snackbar-error']
           });
         }
