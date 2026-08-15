@@ -25,6 +25,7 @@ import { CatalogRepository } from '../../../../core/repositories/catalog.reposit
 import { EventosRepository, EventoReal } from '../../../../core/repositories/eventos.repository';
 import { NetworkService } from '../../../../core/services/network.service';
 import { EvidenceService } from '../../../../core/services/evidence.service';
+import { DatabaseService } from '../../../../core/services/database.service';
 
 // Custom validator for unique document numbers within the FormArray
 function uniqueDocumentValidator(control: AbstractControl): { [key: string]: any } | null {
