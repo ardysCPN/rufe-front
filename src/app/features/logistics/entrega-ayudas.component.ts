@@ -3,6 +3,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { BodegaService, AyudaCatalogo, BodegaInventario } from '../../core/services/bodega.service';
 import { RufeService, IRufeRemote } from '../../core/services/rufe.service';
 import { EvidenceService } from '../../core/services/evidence.service';
@@ -193,16 +194,16 @@ export class EntregaAyudasComponent implements OnInit {
     try {
       let photoUrl = '';
       if (this.capturedFiles.length > 0) {
-        const uploadRes = await this.evidenceService.uploadFile(this.capturedFiles[0], 'entregas').toPromise();
-        photoUrl = uploadRes.url;
+        const uploadRes = await firstValueFrom(this.evidenceService.uploadFile(this.capturedFiles[0], 'entregas'));
+        photoUrl = uploadRes?.url || '';
       }
 
-      await this.bodegaService.realizarEntrega({
+      await firstValueFrom(this.bodegaService.realizarEntrega({
         registroRufeId: this.selectedRufeId!,
         ayudaCatalogoId: this.selectedInventoryId!,
         cantidad: this.deliveryAmount,
         evidenciaFotoUrl: photoUrl
-      }).toPromise();
+      }));
 
       this.snackBar.open('✅ Entrega registrada exitosamente', 'OK', { duration: 5000 });
       this.resetForm();
