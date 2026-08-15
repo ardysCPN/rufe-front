@@ -1,8 +1,7 @@
-// src/app/shared/components/media-capture/media-capture.component.ts
-
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonComponent } from '../button/button.component';
+import { processImageForUpload, validateImageFile } from '../../../core/utils/image-utils';
 
 @Component({
   selector: 'app-media-capture',
@@ -131,7 +130,7 @@ import { ButtonComponent } from '../button/button.component';
           <span class="material-icons text-xl" [class.animate-spin]="isProcessingCapture">
             {{ isProcessingCapture ? 'sync' : 'photo_camera' }}
           </span>
-          <span>{{ isProcessingCapture ? 'Guardando...' : 'Tomar Foto' }}</span>
+          <span>{{ isProcessingCapture ? 'Comprimiendo...' : 'Tomar Foto' }}</span>
         </button>
 
         <!-- Close Camera Button -->
@@ -152,14 +151,14 @@ import { ButtonComponent } from '../button/button.component';
         >
           <span class="material-icons text-base">file_upload</span>
           Subir Archivo
-          <input type="file" (change)="onFileSelected($event)" accept="image/*" class="hidden" />
+          <input type="file" (change)="onFileSelected($event)" accept="image/jpeg,image/png,image/webp" class="hidden" />
         </label>
 
         <!-- Hidden Native Camera Capture Input -->
         <input 
           #nativeCameraInput 
           type="file" 
-          accept="image/*" 
+          accept="image/jpeg,image/png,image/webp" 
           capture="environment" 
           (change)="onFileSelected($event)" 
           class="hidden" 
@@ -275,16 +274,12 @@ export class MediaCaptureComponent implements OnDestroy {
 
   constructor(private cdr: ChangeDetectorRef) {}
 
-  /**
-   * Genera un efecto sonoro de disparo usando Web Audio API sin necesidad de assets externos.
-   */
   private playShutterSound() {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) return;
       const audioCtx = new AudioContextClass();
 
-      // Ruido/Click de obturador rápido
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
@@ -301,20 +296,17 @@ export class MediaCaptureComponent implements OnDestroy {
       osc.start();
       osc.stop(audioCtx.currentTime + 0.09);
     } catch (e) {
-      // Ignorar si el navegador restringe audio
+      // Ignorar
     }
   }
 
-  /**
-   * Feedback háptico de vibración en dispositivos móviles soportados.
-   */
   private triggerHapticFeedback() {
     try {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([40, 30, 40]);
       }
     } catch (e) {
-      // Ignorar si no soportado
+      // Ignorar
     }
   }
 
@@ -329,7 +321,7 @@ export class MediaCaptureComponent implements OnDestroy {
     if (this.stream) this.stopCamera();
 
     const constraintsList: MediaStreamConstraints[] = [
-      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
       { video: { facingMode: 'environment' }, audio: false },
       { video: { facingMode: 'user' }, audio: false },
       { video: true, audio: false }
@@ -377,9 +369,9 @@ export class MediaCaptureComponent implements OnDestroy {
     }, 150);
   }
 
-  capturePhoto() {
+  async capturePhoto() {
     if (!this.videoPlayer || !this.captureCanvas || !this.stream) return;
-    if (this.isProcessingCapture) return; // Evitar ráfagas accidentales
+    if (this.isProcessingCapture) return;
 
     if (this.capturedFiles.length >= this.maxPhotos) {
       alert(`Límite de ${this.maxPhotos} fotos alcanzado.`);
@@ -387,7 +379,6 @@ export class MediaCaptureComponent implements OnDestroy {
       return;
     }
 
-    // 1. Activar efectos sensoriales instantáneos (Flash, Sonido, Vibración)
     this.isCapturing = true;
     this.isProcessingCapture = true;
     this.playShutterSound();
@@ -403,40 +394,48 @@ export class MediaCaptureComponent implements OnDestroy {
     if (context) {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `rufe_evidencia_${Date.now()}.jpg`, { type: 'image/jpeg' });
-          const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+      canvas.toBlob(async (rawBlob) => {
+        if (rawBlob) {
+          try {
+            const processed = await processImageForUpload(rawBlob, `evidencia_${Date.now()}.jpg`, {
+              maxWidth: 1920,
+              maxHeight: 1080,
+              quality: 0.82
+            });
 
-          this.capturedFiles.push(file);
-          this.capturedPreviews.push(previewUrl);
-          this.capturedImage = previewUrl;
+            const file = new File([processed.blob], processed.fileName, { type: 'image/jpeg' });
+            const previewUrl = processed.imageBase64;
 
-          // Mostrar badge de éxito flotante
-          this.lastCaptureSuccess = true;
-          if (this.captureTimeout) clearTimeout(this.captureTimeout);
-          this.captureTimeout = setTimeout(() => {
-            this.lastCaptureSuccess = false;
-            this.cdr.detectChanges();
-          }, 1800);
+            this.capturedFiles.push(file);
+            this.capturedPreviews.push(previewUrl);
+            this.capturedImage = previewUrl;
 
-          this.onCapture.emit(file);
-          this.onCaptureListChange.emit(this.capturedFiles);
+            this.lastCaptureSuccess = true;
+            if (this.captureTimeout) clearTimeout(this.captureTimeout);
+            this.captureTimeout = setTimeout(() => {
+              this.lastCaptureSuccess = false;
+              this.cdr.detectChanges();
+            }, 1800);
 
-          // Auto-scroll a la galería si es necesario
-          setTimeout(() => {
-            if (this.galleryContainer?.nativeElement) {
-              this.galleryContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            this.onCapture.emit(file);
+            this.onCaptureListChange.emit(this.capturedFiles);
+
+            setTimeout(() => {
+              if (this.galleryContainer?.nativeElement) {
+                this.galleryContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 100);
+
+            if (this.capturedFiles.length >= this.maxPhotos) {
+              this.stopCamera();
             }
-          }, 100);
-
-          if (this.capturedFiles.length >= this.maxPhotos) {
-            this.stopCamera();
+          } catch (err: any) {
+            console.error('Error al procesar/comprimir imagen capturada:', err);
+            alert('Error al procesar la foto: ' + (err.message || err));
           }
         }
-      }, 'image/jpeg', 0.85);
+      }, 'image/jpeg', 0.90);
 
-      // Desactivar flash y permitir siguiente disparo tras breve pausa
       setTimeout(() => {
         this.isCapturing = false;
         this.isProcessingCapture = false;
@@ -462,32 +461,67 @@ export class MediaCaptureComponent implements OnDestroy {
     this.selectedPreview = previewUrl;
   }
 
+  /**
+   * Detiene el MediaStream, desasocia el video.srcObject y libera completamente el hardware de la cámara.
+   */
   stopCamera() {
     if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
+      try {
+        this.stream.getTracks().forEach(track => {
+          track.stop();
+        });
+      } catch (e) {
+        console.warn('Error al detener tracks de la cámara:', e);
+      }
       this.stream = null;
     }
+
+    if (this.videoPlayer && this.videoPlayer.nativeElement) {
+      try {
+        this.videoPlayer.nativeElement.pause();
+        this.videoPlayer.nativeElement.srcObject = null;
+      } catch (e) {
+        // Ignorar
+      }
+    }
+
     this.isCameraActive = false;
     this.isLoading = false;
     this.isCapturing = false;
     this.isProcessingCapture = false;
+    this.cdr.detectChanges();
   }
 
-  onFileSelected(event: any) {
+  async onFileSelected(event: any) {
     if (this.capturedFiles.length >= this.maxPhotos) {
       alert(`Límite máximo de ${this.maxPhotos} fotos alcanzado.`);
       return;
     }
 
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        alert(validation.error);
+        event.target.value = '';
+        return;
+      }
+
+      this.isProcessingCapture = true;
       this.playShutterSound();
       this.triggerHapticFeedback();
 
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        const previewUrl = e.target.result;
-        this.capturedFiles.push(file);
+      try {
+        const processed = await processImageForUpload(file, file.name, {
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 0.82
+        });
+
+        const compressedFile = new File([processed.blob], processed.fileName, { type: 'image/jpeg' });
+        const previewUrl = processed.imageBase64;
+
+        this.capturedFiles.push(compressedFile);
         this.capturedPreviews.push(previewUrl);
         this.capturedImage = previewUrl;
 
@@ -498,19 +532,22 @@ export class MediaCaptureComponent implements OnDestroy {
           this.cdr.detectChanges();
         }, 1800);
 
-        this.onCapture.emit(file);
+        this.onCapture.emit(compressedFile);
         this.onCaptureListChange.emit(this.capturedFiles);
 
-        // Auto-scroll a la galería
         setTimeout(() => {
           if (this.galleryContainer?.nativeElement) {
             this.galleryContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
         }, 100);
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        console.error('Error al comprimir archivo seleccionado:', err);
+        alert('Error al procesar la imagen seleccionada: ' + (err.message || err));
+      } finally {
+        this.isProcessingCapture = false;
+        this.cdr.detectChanges();
+      }
     }
-    // Limpiar input para permitir seleccionar el mismo archivo si se desea
     event.target.value = '';
   }
 
@@ -518,7 +555,7 @@ export class MediaCaptureComponent implements OnDestroy {
     this.capturedFiles = [];
     this.capturedPreviews = [];
     this.capturedImage = null;
-    this.isCameraActive = false;
+    this.stopCamera();
     this.onReset.emit();
     this.onCaptureListChange.emit([]);
   }
@@ -528,3 +565,4 @@ export class MediaCaptureComponent implements OnDestroy {
     this.stopCamera();
   }
 }
+
