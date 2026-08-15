@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MediaCaptureComponent } from '../media-capture/media-capture.component';
@@ -27,7 +27,7 @@ import { ButtonComponent } from '../button/button.component';
           </div>
         </div>
         <button 
-          (click)="dialogRef.close()" 
+          (click)="closeModal()" 
           class="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           title="Cerrar modal"
         >
@@ -38,6 +38,7 @@ import { ButtonComponent } from '../button/button.component';
       <!-- Modal Body (Scrollable area) -->
       <div class="modal-scroll-body flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0 space-y-4">
         <app-media-capture 
+          #mediaCapture
           [maxPhotos]="maxPhotos"
           (onCaptureListChange)="onCaptureListChange($event)">
         </app-media-capture>
@@ -47,14 +48,14 @@ import { ButtonComponent } from '../button/button.component';
       <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-sm shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 z-10">
         <app-button 
           variant="basic" 
-          (click)="dialogRef.close()"
+          (click)="closeModal()"
           customClasses="w-full sm:w-auto px-5 py-2.5 font-medium"
         >
           Cancelar
         </app-button>
         <app-button 
           variant="primary" 
-          (click)="dialogRef.close(capturedImages)" 
+          (click)="closeModal(capturedImages)" 
           [disabled]="capturedImages.length === 0"
           customClasses="w-full sm:w-auto px-6 py-2.5 font-bold shadow-lg shadow-blue-500/20"
         >
@@ -84,7 +85,9 @@ import { ButtonComponent } from '../button/button.component';
     }
   `]
 })
-export class CameraModalComponent {
+export class CameraModalComponent implements OnDestroy {
+  @ViewChild('mediaCapture') mediaCaptureComponent?: MediaCaptureComponent;
+
   capturedImages: File[] = [];
   maxPhotos: number = 5;
 
@@ -100,4 +103,14 @@ export class CameraModalComponent {
   onCaptureListChange(files: File[]) {
     this.capturedImages = files;
   }
+
+  closeModal(result?: File[]) {
+    this.mediaCaptureComponent?.stopCamera();
+    this.dialogRef.close(result);
+  }
+
+  ngOnDestroy() {
+    this.mediaCaptureComponent?.stopCamera();
+  }
 }
+

@@ -7,6 +7,7 @@ import { RufeRepository } from '../repositories/rufe.repository';
 import { environment } from '../../../environments/environment';
 import { IRufeLocal } from '../../models/rufe.model';
 import { AuthService } from './auth.service';
+import { EvidenceService } from './evidence.service';
 
 @Injectable({ providedIn: 'root' })
 export class SyncService {
@@ -18,7 +19,8 @@ export class SyncService {
     private network: NetworkService,
     private http: HttpClient,
     private snackBar: MatSnackBar,
-    private authService: AuthService
+    private authService: AuthService,
+    private evidenceService: EvidenceService
   ) {
     // Auto sync cuando vuelva la conexión
     this.network.isOnline$.subscribe(async isOnline => {
@@ -80,15 +82,9 @@ export class SyncService {
             for (const ev of pendingEvidencias) {
               if (ev.estado_sincronizacion !== 'sincronizado' && ev.blob) {
                 try {
-                  const formData = new FormData();
-                  const filename = `rufe_${r.cliente_id}_${Date.now()}.jpg`;
-                  const fileToUpload = new File([ev.blob], filename, { type: ev.mime_type || 'image/jpeg' });
-                  formData.append('file', fileToUpload);
-                  formData.append('subFolder', 'censos');
-
-                  const uploadRes: any = await firstValueFrom(this.http.post(`${this.apiUrl}/evidences/upload`, formData));
+                  const uploadRes = await firstValueFrom(this.evidenceService.uploadFile(ev.blob, 'censos'));
                   if (uploadRes && uploadRes.url) {
-                    await firstValueFrom(this.http.post(`${this.apiUrl}/rufe/evidencias`, {
+                    await firstValueFrom(this.evidenceService.linkToRufe({
                       registroRufeId: createdRufeId,
                       fotoUrl: uploadRes.url,
                       tipoEvidencia: ev.tipo_evidencia || 'FOTO_CENSO'

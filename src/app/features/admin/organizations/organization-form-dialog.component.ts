@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminRepository, Organization } from '../../../core/repositories/admin.repository';
+import { extractErrorMessage } from '../../../core/utils/error.utils';
 import { InputComponent } from '../../../shared/components/input/input.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 
@@ -18,7 +19,6 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
     InputComponent,
     ButtonComponent
   ],
-  // ... rest of template same ...
   template: `
     <div class="bg-white dark:bg-gray-800 p-6 md:p-8 w-full max-w-lg mx-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
       <h2 mat-dialog-title class="text-2xl font-bold mb-6 text-gray-900 dark:text-white !p-0">
@@ -33,7 +33,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
             name="nombreOrganizacion" 
             formControlName="nombreOrganizacion" 
             [required]="true"
-            placeholder="Ej. Alcaldía de Quibdó">
+            placeholder="Ej. Gobernación del Chocó">
           </app-input>
 
           <app-input 
@@ -89,7 +89,6 @@ export class OrganizationFormDialogComponent {
     private adminRepository: AdminRepository,
     private snackBar: MatSnackBar
   ) {
-    console.log('OrganizationFormDialogComponent initialized with data:', data);
     this.orgForm = this.fb.group({
       nombreOrganizacion: [data?.nombreOrganizacion || '', Validators.required],
       nit: [data?.nit || ''],
@@ -111,14 +110,15 @@ export class OrganizationFormDialogComponent {
           this.snackBar.open(
             `Organización ${this.data ? 'actualizada' : 'creada'} con éxito`,
             'Cerrar',
-            { duration: 3000, panelClass: ['snackbar-success'] }
+            { duration: 3500, panelClass: ['snackbar-success'] }
           );
           this.dialogRef.close(true);
         },
         error: (err) => {
           console.error('Error saving organization', err);
-          this.snackBar.open('Error al guardar la organización', 'Cerrar', {
-            duration: 5000,
+          const errorMsg = extractErrorMessage(err, 'Error al guardar la organización');
+          this.snackBar.open(errorMsg, 'Cerrar', {
+            duration: 7000,
             panelClass: ['snackbar-error']
           });
         }

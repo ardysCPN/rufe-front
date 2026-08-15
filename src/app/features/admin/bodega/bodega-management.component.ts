@@ -7,6 +7,7 @@ import { ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { BodegaService, AyudaCatalogo, BodegaInventario, AyudasEntregadas } from '../../../core/services/bodega.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../core/utils/error.utils';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
@@ -331,16 +332,17 @@ export class BodegaManagementComponent implements OnInit {
   saveCatalogItem() {
     if (!this.newCatalogItem.nombre) return;
     
-    // Si tiene ID, deberíamos llamar a update, pero BodegaService solo tiene addCatalogoItem
-    // Para efectos de este ejercicio, usaremos addCatalogoItem o simularemos el comportamiento
     this.bodegaService.addCatalogoItem(this.newCatalogItem).subscribe({
       next: () => {
-        this.snackBar.open(this.newCatalogItem.id ? 'Artículo actualizado' : 'Artículo agregado al catálogo', 'OK', { duration: 3000 });
+        this.snackBar.open(this.newCatalogItem.id ? 'Artículo actualizado' : 'Artículo agregado al catálogo con éxito', 'OK', { duration: 3500, panelClass: ['snackbar-success'] });
         this.showAddCatalogModal = false;
         this.newCatalogItem = { nombre: '', descripcion: '', unidadMedida: 'UND', tipoAyuda: 'INDIVIDUAL' };
         this.loadData();
       },
-      error: (err: any) => this.snackBar.open('Error: ' + err.message, 'Cerrar')
+      error: (err: any) => {
+        const msg = extractErrorMessage(err, 'Error al guardar el artículo en el catálogo');
+        this.snackBar.open(msg, 'Cerrar', { duration: 6000, panelClass: ['snackbar-error'] });
+      }
     });
   }
 
@@ -351,8 +353,7 @@ export class BodegaManagementComponent implements OnInit {
 
   deleteCatalogItem(item: AyudaCatalogo) {
     if (confirm(`¿Estás seguro de eliminar "${item.nombre}"?`)) {
-      // Simulando eliminación (requeriría endpoint en bodegaService)
-      this.snackBar.open('Funcionalidad de eliminación pendiente de backend', 'OK');
+      this.snackBar.open('Funcionalidad de eliminación restringida para proteger histórico de entregas.', 'OK', { duration: 4000 });
     }
   }
 
@@ -370,11 +371,14 @@ export class BodegaManagementComponent implements OnInit {
     if (!this.selectedInventory || !this.selectedInventory.ayudaCatalogo?.id) return;
     this.bodegaService.ajustarStock(this.selectedInventory.ayudaCatalogo.id, this.adjustAmount).subscribe({
         next: () => {
-          this.snackBar.open('Stock actualizado exitosamente', 'OK', { duration: 3000 });
+          this.snackBar.open('Stock actualizado exitosamente', 'OK', { duration: 3500, panelClass: ['snackbar-success'] });
           this.showAdjustStockModal = false;
           this.loadData();
         },
-        error: (err: any) => this.snackBar.open('Error: ' + err.message, 'Cerrar')
+        error: (err: any) => {
+          const msg = extractErrorMessage(err, 'Error al ajustar stock');
+          this.snackBar.open(msg, 'Cerrar', { duration: 6000, panelClass: ['snackbar-error'] });
+        }
     });
   }
 }

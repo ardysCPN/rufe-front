@@ -109,7 +109,8 @@ export class RufeFormComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
-    private evidenceService: EvidenceService
+    private evidenceService: EvidenceService,
+    private dbService: DatabaseService
   ) {
     this.createForm();
   }
@@ -386,9 +387,9 @@ export class RufeFormComponent implements OnInit {
             sentToServer = true;
             const registroRufeId = response.id;
 
-            // UPLOAD EVIDENCES ASYNC
+            // UPLOAD EVIDENCES ASYNC (con respaldo offline garantizado)
             if (this.capturedEvidences.length > 0) {
-              this.uploadAndLinkEvidences(registroRufeId);
+              this.uploadAndLinkEvidences(registroRufeId, payload.clienteId);
             }
 
             this.showSuccessModal('Enviado Exitosamente', 'La información se ha cargado correctamente en el servidor.');
@@ -442,9 +443,6 @@ export class RufeFormComponent implements OnInit {
           } catch (error) {
             console.error('Error crítico al guardar en IndexedDB:', error);
             if (error instanceof Error && (error.message.includes('Duplicado') || error.name === 'PrematureCommitError')) {
-              // Hack: Si es PrematureCommitError pero los datos están (según reporte usuario), podríamos asumir éxito
-              // O si arreglamos el repo, esto no debería pasar.
-              // Si sigue pasando, avisar al usuario.
               this.snackBar.open('⚠️ Error al guardar (DB Local). Intente de nuevo.', 'Cerrar', { duration: 5000 });
             } else {
               this.snackBar.open('❌ Error crítico al guardar el formulario localmente.', 'Cerrar', {
@@ -456,8 +454,6 @@ export class RufeFormComponent implements OnInit {
         }
       } finally {
         this.isSubmitting = false;
-        // Don't enable form here if successful, because fullReset() will handle state.
-        // Check if form is still disabled (implying failure/still on same page without reset)
         if (this.rufeForm.disabled && !this.isSubmitting) {
           this.rufeForm.enable();
         }
@@ -488,9 +484,11 @@ export class RufeFormComponent implements OnInit {
     });
   }
 
-  private async uploadAndLinkEvidences(registroRufeId: number) {
+  private async uploadAndLinkEvidences(registroRufeId: number, clienteId?: string) {
+    let pendingLocalEvidences = false;
     for (const file of this.capturedEvidences) {
       if (!file) continue;
+      let uploaded = false;
       try {
         const uploadRes = await firstValueFrom(this.evidenceService.uploadFile(file));
         if (uploadRes && uploadRes.url) {
@@ -499,10 +497,36 @@ export class RufeFormComponent implements OnInit {
             fotoUrl: uploadRes.url,
             tipoEvidencia: 'FOTO_CENSO'
           }));
+          uploaded = true;
         }
       } catch (err) {
-        console.error('Error subiendo evidencia:', err);
+        console.warn('Subida en línea falló para una evidencia, guardando en storage local para sincronizar luego:', err);
       }
+
+      // Si no logró subir al servidor inmediatamente, respaldar en IndexedDB local
+      if (!uploaded) {
+        try {
+          await this.dbService.evidencias_locales.add({
+            cliente_id: uuidv4(),
+            registro_rufe_cliente_id: clienteId || String(registroRufeId),
+            tipo_evidencia: 'FOTO_CENSO',
+            blob: file,
+            mime_type: file.type || 'image/jpeg',
+            estado_sincronizacion: 'pendiente_crear',
+            fecha_creacion: new Date()
+          });
+          pendingLocalEvidences = true;
+        } catch (dbErr) {
+          console.error('Error guardando evidencia localmente:', dbErr);
+        }
+      }
+    }
+
+    if (pendingLocalEvidences) {
+      this.snackBar.open('📸 Algunas fotos se respaldaron en el dispositivo y se sincronizarán cuando haya conexión.', 'Cerrar', {
+        duration: 5000,
+        panelClass: ['snackbar-warn']
+      });
     }
   }
 
